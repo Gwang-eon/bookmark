@@ -1,14 +1,19 @@
 const state = {
   rawText: "",
   analysis: null,
+  analysisContext: null,
   currentPath: "",
   backups: [],
   backupStorePath: "",
+  localFileAccessMode: true,
+  mode: "local",
+  sessionToken: "",
 };
 
 const fileInput = document.getElementById("fileInput");
 const pathInput = document.getElementById("pathInput");
 const pathSuggestions = document.getElementById("pathSuggestions");
+const loadCard = document.getElementById("loadCard");
 const linkCheckMode = document.getElementById("linkCheckMode");
 const timeoutMs = document.getElementById("timeoutMs");
 const analyzeFileButton = document.getElementById("analyzeFileButton");
@@ -30,6 +35,7 @@ const exportFormat = document.getElementById("exportFormat");
 const removeDeadLinks = document.getElementById("removeDeadLinks");
 const removeDuplicates = document.getElementById("removeDuplicates");
 const backupStorePath = document.getElementById("backupStorePath");
+const localAccessCard = document.getElementById("localAccessCard");
 const backupButton = document.getElementById("backupButton");
 const applyButton = document.getElementById("applyButton");
 const refreshBackupsButton = document.getElementById("refreshBackupsButton");
@@ -59,6 +65,14 @@ function getCleanupOptions() {
 
 function getTargetPath() {
   return pathInput.value.trim() || state.currentPath;
+}
+
+function buildRequestHeaders(includeSessionToken = false) {
+  const headers = {};
+  if (includeSessionToken && state.sessionToken) {
+    headers["x-bookmark-organizer-token"] = state.sessionToken;
+  }
+  return headers;
 }
 
 function escapeHtml(value) {
@@ -283,6 +297,36 @@ function renderBackups() {
   );
 }
 
+function updateLocalModeUi() {
+  if (!state.localFileAccessMode) {
+    analyzePathButton.disabled = true;
+    backupButton.disabled = true;
+    applyButton.disabled = true;
+    refreshBackupsButton.disabled = true;
+    pathInput.disabled = true;
+    localAccessCard.classList.add("hidden");
+    loadCard.querySelector(".hint-list").innerHTML += "<p>remote 모드에서는 업로드 기반 분석만 사용할 수 있다.</p>";
+    return;
+  }
+
+  pathInput.disabled = false;
+  analyzePathButton.disabled = false;
+  backupButton.disabled = false;
+  refreshBackupsButton.disabled = false;
+}
+
+function updateApplyAvailability() {
+  const canApply =
+    state.localFileAccessMode &&
+    state.analysisContext?.kind === "path" &&
+    Boolean(state.currentPath) &&
+    Boolean(state.rawText) &&
+    Boolean(state.analysis);
+
+  applyButton.disabled = !canApply;
+  applyButton.title = canApply ? "" : "직접 적용은 현재 경로를 다시 분석한 결과에서만 가능하다.";
+}
+
 function renderPathSuggestions(paths) {
   pathSuggestions.innerHTML = paths.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("");
 }
@@ -307,11 +351,12 @@ async function getJson(url) {
   return response.json();
 }
 
-async function postJson(url, payload) {
+async function postJson(url, payload, options = {}) {
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...buildRequestHeaders(options.includeSessionToken),
     },
     body: JSON.stringify(payload),
   });
@@ -331,17 +376,25 @@ async function postJson(url, payload) {
 
 async function refreshBackups() {
   const targetPath = getTargetPath();
-  if (!targetPath) {
+  if (!state.localFileAccessMode || !targetPath) {
     state.backups = [];
     renderBackups();
     return;
   }
 
-  const payload = await getJson(`/api/backups?path=${encodeURIComponent(targetPath)}`);
+  const response = await fetch(`/api/backups?path=${encodeURIComponent(targetPath)}`, {
+    headers: buildRequestHeaders(true),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "요청 실패" }));
+    throw new Error(error.error || "요청 실패");
+  }
+  const payload = await response.json();
   state.currentPath = payload.resolvedPath;
   pathInput.value = payload.resolvedPath;
   state.backups = payload.backups;
   renderBackups();
+  updateApplyAvailability();
 }
 
 backupTable.addEventListener("click", async (event) => {
@@ -362,12 +415,13 @@ backupTable.addEventListener("click", async (event) => {
       path: targetPath,
       backupId: button.dataset.backupId,
       analysisOptions: getAnalysisOptions(),
-    });
+    }, { includeSessionToken: true });
 
     state.currentPath = payload.resolvedPath;
     pathInput.value = payload.resolvedPath;
     state.rawText = payload.rawText;
     state.analysis = payload.analysis;
+    state.analysisContext = payload.analysisContext;
     state.backups = payload.backups;
     renderAnalysis(payload.analysis);
     setStatus(`롤백 완료: ${payload.restoredBackup.createdAt} 백업으로 복원했다.`);
@@ -387,16 +441,18 @@ analyzeFileButton.addEventListener("click", async () => {
   try {
     state.currentPath = getTargetPath();
     state.rawText = await file.text();
-    const { analysis } = await postJson("/api/analyze", {
+    const payload = await postJson("/api/analyze", {
       rawText: state.rawText,
       options: getAnalysisOptions(),
     });
-    state.analysis = analysis;
+    state.analysis = payload.analysis;
+    state.analysisContext = payload.analysisContext;
     await refreshBackups().catch(() => {
       state.backups = [];
     });
-    renderAnalysis(analysis);
-    setStatus(`분석 완료: 북마크 ${analysis.summary.totalBookmarks}개`);
+    renderAnalysis(payload.analysis);
+    updateApplyAvailability();
+    setStatus(`분석 완료: 북마크 ${payload.analysis.summary.totalBookmarks}개`);
   } catch (error) {
     setStatus(error.message, "error");
   }
@@ -413,13 +469,15 @@ analyzePathButton.addEventListener("click", async () => {
     const payload = await postJson("/api/analyze-path", {
       path: pathInput.value.trim(),
       options: getAnalysisOptions(),
-    });
+    }, { includeSessionToken: true });
     state.currentPath = payload.resolvedPath;
     pathInput.value = payload.resolvedPath;
     state.rawText = payload.rawText;
     state.analysis = payload.analysis;
+    state.analysisContext = payload.analysisContext;
     state.backups = payload.backups;
     renderAnalysis(payload.analysis);
+    updateApplyAvailability();
     setStatus(`분석 완료: 북마크 ${payload.analysis.summary.totalBookmarks}개`);
   } catch (error) {
     setStatus(error.message, "error");
@@ -470,11 +528,12 @@ backupButton.addEventListener("click", async () => {
     const payload = await postJson("/api/backup", {
       path: targetPath,
       reason: "manual",
-    });
+    }, { includeSessionToken: true });
     state.currentPath = payload.resolvedPath;
     pathInput.value = payload.resolvedPath;
     state.backups = payload.backups;
     renderBackups();
+    updateApplyAvailability();
     setStatus("백업을 생성했다.");
   } catch (error) {
     setStatus(error.message, "error");
@@ -498,16 +557,19 @@ applyButton.addEventListener("click", async () => {
       path: targetPath,
       rawText: state.rawText,
       analysis: state.analysis,
+      analysisContext: state.analysisContext,
       options: getCleanupOptions(),
       analysisOptions: getAnalysisOptions(),
-    });
+    }, { includeSessionToken: true });
 
     state.currentPath = payload.resolvedPath;
     pathInput.value = payload.resolvedPath;
     state.rawText = payload.rawText;
     state.analysis = payload.analysis;
+    state.analysisContext = payload.analysisContext;
     state.backups = payload.backups;
     renderAnalysis(payload.analysis);
+    updateApplyAvailability();
     setStatus(`적용 완료: ${payload.exportedSize}개 북마크를 현재 경로에 반영했다.`);
   } catch (error) {
     setStatus(error.message, "error");
@@ -527,7 +589,12 @@ async function bootstrap() {
   try {
     const health = await getJson("/api/health");
     state.backupStorePath = health.backupStorePath;
-    backupStorePath.textContent = health.backupStorePath;
+    state.localFileAccessMode = Boolean(health.localFileAccessMode);
+    state.mode = health.mode;
+    state.sessionToken = health.sessionToken || "";
+    backupStorePath.textContent = health.backupStorePath || "remote 모드";
+    updateLocalModeUi();
+
     if (Array.isArray(health.detectedChromePaths) && health.detectedChromePaths.length) {
       renderPathSuggestions(health.detectedChromePaths);
       if (!pathInput.value.trim()) {
@@ -540,6 +607,8 @@ async function bootstrap() {
   } catch {
     backupStorePath.textContent = "확인 실패";
   }
+
+  updateApplyAvailability();
 }
 
 bootstrap();

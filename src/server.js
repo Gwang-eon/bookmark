@@ -18,11 +18,20 @@ import {
   createExportPayload,
   getDefaultChromePaths,
 } from "./bookmark-service.js";
+import {
+  computeContentFingerprint,
+  createSessionToken,
+  hasValidSessionToken,
+  validateApplyAnalysisContext,
+} from "./server-guards.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, "..", "public");
+const localFileAccessMode = process.env.BOOKMARK_ACCESS_MODE !== "remote";
+const host = process.env.HOST || (localFileAccessMode ? "127.0.0.1" : "0.0.0.0");
 const port = Number(process.env.PORT || 3210);
+const sessionToken = createSessionToken();
 
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
@@ -37,6 +46,28 @@ function sendJson(response, statusCode, payload) {
     "Content-Type": "application/json; charset=utf-8",
   });
   response.end(JSON.stringify(payload));
+}
+
+function requireSessionToken(request, response) {
+  if (hasValidSessionToken(request.headers, sessionToken)) {
+    return true;
+  }
+
+  sendJson(response, 403, {
+    error: "로컬 세션 토큰이 없거나 일치하지 않습니다. 페이지를 새로고침한 뒤 다시 시도하세요.",
+  });
+  return false;
+}
+
+function requireLocalFileAccess(response) {
+  if (localFileAccessMode) {
+    return true;
+  }
+
+  sendJson(response, 403, {
+    error: "현재 서버는 remote 모드로 실행 중입니다. 로컬 Bookmarks 경로 접근, 직접 적용, 백업/롤백은 사용할 수 없습니다.",
+  });
+  return false;
 }
 
 async function readBody(request) {
@@ -79,14 +110,25 @@ const server = http.createServer(async (request, response) => {
       sendJson(response, 200, {
         ok: true,
         port,
+        host,
+        mode: localFileAccessMode ? "local" : "remote",
+        localFileAccessMode,
         defaultChromePaths: getDefaultChromePaths(),
-        detectedChromePaths: await detectChromeBookmarkFiles(),
-        backupStorePath: getBackupStorePath(),
+        detectedChromePaths: localFileAccessMode ? await detectChromeBookmarkFiles() : [],
+        backupStorePath: localFileAccessMode ? getBackupStorePath() : null,
+        sessionToken: localFileAccessMode ? sessionToken : null,
       });
       return;
     }
 
     if (request.method === "GET" && requestUrl.pathname === "/api/backups") {
+      if (!requireLocalFileAccess(response)) {
+        return;
+      }
+      if (!requireSessionToken(request, response)) {
+        return;
+      }
+
       const targetPath = requestUrl.searchParams.get("path");
       if (!targetPath) {
         sendJson(response, 400, { error: "path가 필요합니다." });
@@ -109,11 +151,24 @@ const server = http.createServer(async (request, response) => {
       }
 
       const analysis = await analyzeBookmarks(rawText, body.options ?? {});
-      sendJson(response, 200, { analysis });
+      sendJson(response, 200, {
+        analysis,
+        analysisContext: {
+          kind: "upload",
+          sourceFingerprint: computeContentFingerprint(rawText),
+        },
+      });
       return;
     }
 
     if (request.method === "POST" && requestUrl.pathname === "/api/analyze-path") {
+      if (!requireLocalFileAccess(response)) {
+        return;
+      }
+      if (!requireSessionToken(request, response)) {
+        return;
+      }
+
       const body = await readBody(request);
       if (!body.path) {
         sendJson(response, 400, { error: "path가 필요합니다." });
@@ -126,12 +181,24 @@ const server = http.createServer(async (request, response) => {
         rawText,
         resolvedPath,
         analysis,
+        analysisContext: {
+          kind: "path",
+          resolvedPath,
+          sourceFingerprint: computeContentFingerprint(rawText),
+        },
         backups: await listBackups(resolvedPath),
       });
       return;
     }
 
     if (request.method === "POST" && requestUrl.pathname === "/api/backup") {
+      if (!requireLocalFileAccess(response)) {
+        return;
+      }
+      if (!requireSessionToken(request, response)) {
+        return;
+      }
+
       const body = await readBody(request);
       if (!body.path) {
         sendJson(response, 400, { error: "path가 필요합니다." });
@@ -153,15 +220,35 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && requestUrl.pathname === "/api/apply") {
-      const body = await readBody(request);
-      if (!body.path || !body.rawText || !body.analysis) {
-        sendJson(response, 400, { error: "path, rawText, analysis가 필요합니다." });
+      if (!requireLocalFileAccess(response)) {
+        return;
+      }
+      if (!requireSessionToken(request, response)) {
         return;
       }
 
-      const { resolvedPath } = await readBookmarksFile(body.path);
+      const body = await readBody(request);
+      if (!body.path || !body.rawText || !body.analysis || !body.analysisContext) {
+        sendJson(response, 400, { error: "path, rawText, analysis, analysisContext가 필요합니다." });
+        return;
+      }
+
+      const { rawText: currentRawText, resolvedPath } = await readBookmarksFile(body.path);
+      const validationError = validateApplyAnalysisContext({
+        analysisContext: body.analysisContext,
+        requestedPath: body.path,
+        resolvedPath,
+        currentFingerprint: computeContentFingerprint(currentRawText),
+        sourceFingerprint: computeContentFingerprint(body.rawText),
+      });
+      if (validationError) {
+        sendJson(response, 409, { error: validationError });
+        return;
+      }
+
       const backup = await createCompressedBackup(resolvedPath, {
         reason: "pre-apply",
+        rawText: currentRawText,
       });
 
       const nextPayload = createChromeBookmarkPayload(body.rawText, body.analysis, body.options ?? {});
@@ -172,6 +259,11 @@ const server = http.createServer(async (request, response) => {
         resolvedPath,
         rawText: nextPayload.content,
         analysis,
+        analysisContext: {
+          kind: "path",
+          resolvedPath,
+          sourceFingerprint: computeContentFingerprint(nextPayload.content),
+        },
         backup,
         backups: await listBackups(resolvedPath),
         exportedSize: nextPayload.exportedSize,
@@ -180,6 +272,13 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && requestUrl.pathname === "/api/rollback") {
+      if (!requireLocalFileAccess(response)) {
+        return;
+      }
+      if (!requireSessionToken(request, response)) {
+        return;
+      }
+
       const body = await readBody(request);
       if (!body.path || !body.backupId) {
         sendJson(response, 400, { error: "path와 backupId가 필요합니다." });
@@ -192,6 +291,11 @@ const server = http.createServer(async (request, response) => {
         resolvedPath: restored.resolvedPath,
         rawText: restored.rawText,
         analysis,
+        analysisContext: {
+          kind: "path",
+          resolvedPath: restored.resolvedPath,
+          sourceFingerprint: computeContentFingerprint(restored.rawText),
+        },
         restoredBackup: restored.backup,
         safetyBackup: restored.safetyBackup,
         backups: await listBackups(restored.resolvedPath),
@@ -223,6 +327,6 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, () => {
-  console.log(`Chrome Bookmark Organizer running at http://localhost:${port}`);
+server.listen(port, host, () => {
+  console.log(`Chrome Bookmark Organizer running at http://${host}:${port}`);
 });

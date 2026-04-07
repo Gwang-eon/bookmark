@@ -488,8 +488,16 @@ async function probeUrl(url, timeoutMs) {
         continue;
       }
 
+      if ([404, 410, 451].includes(response.status)) {
+        return {
+          status: "dead",
+          httpStatus: response.status,
+          detail: method,
+        };
+      }
+
       return {
-        status: response.status >= 500 ? "suspect" : "dead",
+        status: "suspect",
         httpStatus: response.status,
         detail: method,
       };
@@ -499,7 +507,7 @@ async function probeUrl(url, timeoutMs) {
       }
 
       return {
-        status: error?.name === "TimeoutError" ? "suspect" : "dead",
+        status: "suspect",
         httpStatus: null,
         detail: error?.message ?? "요청 실패",
       };
@@ -507,7 +515,7 @@ async function probeUrl(url, timeoutMs) {
   }
 
   return {
-    status: "dead",
+    status: "suspect",
     httpStatus: null,
     detail: "응답 없음",
   };
@@ -676,25 +684,38 @@ function getModePathSegments(item, mode) {
   return item.folderPath;
 }
 
-function getFilteredItems(analysis, filterOptions = {}) {
+function buildKeepIdSet(analysis, filterOptions = {}) {
   const {
     removeDeadLinks = true,
     removeDuplicates = true,
   } = filterOptions;
 
   const dedupeKeepers = new Set(analysis.duplicateGroups.map((group) => group.keep.id));
+  const keepIds = new Set();
 
-  return sortByImportance(
-    analysis.items.filter((item) => {
-      if (removeDeadLinks && (item.linkStatus === "dead" || item.linkStatus === "suspect")) {
-        return false;
-      }
-      if (removeDuplicates && item.duplicateCount > 1 && !dedupeKeepers.has(item.id)) {
-        return false;
-      }
-      return true;
-    }),
-  );
+  for (const item of analysis.items) {
+    if (removeDeadLinks && (item.linkStatus === "dead" || item.linkStatus === "suspect")) {
+      continue;
+    }
+    if (removeDuplicates && item.duplicateCount > 1 && !dedupeKeepers.has(item.id)) {
+      continue;
+    }
+    keepIds.add(item.id);
+  }
+
+  return keepIds;
+}
+
+function getFilteredItems(analysis, filterOptions = {}) {
+  const keepIds = buildKeepIdSet(analysis, filterOptions);
+  const sortMode = filterOptions.sortMode ?? "importance";
+  const filteredItems = analysis.items.filter((item) => keepIds.has(item.id));
+
+  if (sortMode === "sequence") {
+    return [...filteredItems].sort((left, right) => left.sequence - right.sequence);
+  }
+
+  return sortByImportance(filteredItems);
 }
 
 function escapeHtml(value) {
@@ -744,6 +765,78 @@ function buildExportTree(items, mode) {
   return root;
 }
 
+function filterChromeFolderNode(node, keepIds) {
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+
+  if (node.type === "url") {
+    return keepIds.has(node.id) ? deepClone(node) : null;
+  }
+
+  if (node.type === "folder") {
+    const nextNode = deepClone(node);
+    nextNode.children = (node.children ?? [])
+      .map((child) => filterChromeFolderNode(child, keepIds))
+      .filter(Boolean);
+    return nextNode;
+  }
+
+  return deepClone(node);
+}
+
+function createFilteredOriginalRoots(parsed, analysis, filterOptions = {}) {
+  const keepIds = buildKeepIdSet(analysis, filterOptions);
+  const nextRoots = deepClone(parsed.roots);
+
+  for (const rootKey of ["bookmark_bar", "other", "synced"]) {
+    if (parsed.roots[rootKey]?.type === "folder") {
+      nextRoots[rootKey] = filterChromeFolderNode(parsed.roots[rootKey], keepIds);
+    }
+  }
+
+  return {
+    keepIds,
+    nextRoots,
+  };
+}
+
+function chromeNodeToExportNode(node) {
+  if (node.type === "url") {
+    return {
+      type: "url",
+      name: node.name,
+      url: node.url,
+      addDate: chromeTimeToUnixMs(node.date_added),
+    };
+  }
+
+  return {
+    type: "folder",
+    name: node.name,
+    children: (node.children ?? []).map(chromeNodeToExportNode),
+  };
+}
+
+function buildOriginalExportTreeFromRoots(roots) {
+  const root = createFolderNode("Bookmarks");
+
+  for (const rootKey of ["bookmark_bar", "other", "synced"]) {
+    const node = roots[rootKey];
+    if (!node?.type || node.type !== "folder") {
+      continue;
+    }
+
+    root.children.push({
+      type: "folder",
+      name: ROOT_LABELS[rootKey] ?? rootKey,
+      children: (node.children ?? []).map(chromeNodeToExportNode),
+    });
+  }
+
+  return root;
+}
+
 export function createExportPayload(rawText, analysis, exportOptions = {}) {
   const {
     mode = "original",
@@ -755,9 +848,8 @@ export function createExportPayload(rawText, analysis, exportOptions = {}) {
   const filteredItems = getFilteredItems(analysis, {
     removeDeadLinks,
     removeDuplicates,
+    sortMode: mode === "original" ? "sequence" : "importance",
   });
-
-  const exportTree = buildExportTree(filteredItems, mode);
 
   if (format === "json") {
     return {
@@ -778,6 +870,16 @@ export function createExportPayload(rawText, analysis, exportOptions = {}) {
       ),
     };
   }
+
+  const exportTree =
+    mode === "original"
+      ? buildOriginalExportTreeFromRoots(
+          createFilteredOriginalRoots(JSON.parse(rawText), analysis, {
+            removeDeadLinks,
+            removeDuplicates,
+          }).nextRoots,
+        )
+      : buildExportTree(filteredItems, mode);
 
   const content = [
     "<!DOCTYPE NETSCAPE-Bookmark-file-1>",
@@ -983,7 +1085,16 @@ export function createChromeBookmarkPayload(rawText, analysis, applyOptions = {}
     throw new Error("크롬 북마크 JSON 형식이 아닙니다. roots 객체가 필요합니다.");
   }
 
-  const { filteredItems, nextRoots } = applyChildrenToRoots(parsed, analysis, applyOptions);
+  const { nextRoots, filteredItems } =
+    applyOptions.mode === "original"
+      ? {
+          ...createFilteredOriginalRoots(parsed, analysis, applyOptions),
+          filteredItems: getFilteredItems(analysis, {
+            ...applyOptions,
+            sortMode: "sequence",
+          }),
+        }
+      : applyChildrenToRoots(parsed, analysis, applyOptions);
   const nextPayload = {
     version: parsed.version ?? 1,
     roots: nextRoots,

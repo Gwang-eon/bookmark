@@ -29,7 +29,7 @@
       </header>
 
       <main class="layout">
-        <section class="card control-card">
+        <section id="loadCard" class="card control-card">
           <div class="section-head">
             <h2>불러오기</h2>
             <p>파일 업로드 또는 로컬 경로를 직접 입력할 수 있다.</p>
@@ -77,7 +77,7 @@
         </section>
 
         <section id="resultsSection" class="results hidden">
-          <section class="card">
+          <section id="localAccessCard" class="card">
             <div class="section-head">
               <h2>요약</h2>
               <p>현재 북마크 상태를 빠르게 볼 수 있는 핵심 지표다.</p>
@@ -172,7 +172,7 @@
               </label>
 
               <label class="field inline-field">
-                <input id="removeDeadLinks" type="checkbox" checked />
+                <input id="removeDeadLinks" type="checkbox" />
                 <span>죽은 링크 제외</span>
               </label>
 
