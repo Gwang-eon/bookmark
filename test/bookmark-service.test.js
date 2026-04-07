@@ -367,3 +367,72 @@ test("createChromeBookmarkPayload preserves original folder structure in origina
   assert.equal(children[1].id, "11");
   assert.equal(children[1].children.length, 0);
 });
+
+test("createExportPayload excludes items by excludedIds", async () => {
+  const analysis = await analyzeBookmarks(createSampleBookmarks("https://example.com"), {
+    linkCheckMode: "none",
+    linkStatusOverrides: {
+      "https://example.com/alive": { status: "alive", httpStatus: 200, detail: "fixture" },
+      "https://example.com/missing": { status: "alive", httpStatus: 200, detail: "fixture" },
+      "https://openai.com/docs": { status: "alive", httpStatus: 200, detail: "fixture" },
+    },
+  });
+
+  const payload = createExportPayload("", analysis, {
+    mode: "topic",
+    format: "json",
+    removeDeadLinks: false,
+    removeDuplicates: false,
+    excludedIds: ["4"],
+  });
+
+  const parsed = JSON.parse(payload.content);
+  assert.ok(parsed.items.every((item) => item.id !== "4"));
+  assert.ok(parsed.items.length < analysis.summary.totalBookmarks);
+});
+
+test("excludedIds overrides other filter flags", async () => {
+  const analysis = await analyzeBookmarks(createSampleBookmarks("https://example.com"), {
+    linkCheckMode: "none",
+    linkStatusOverrides: {
+      "https://example.com/alive": { status: "alive", httpStatus: 200, detail: "fixture" },
+      "https://example.com/missing": { status: "alive", httpStatus: 200, detail: "fixture" },
+      "https://openai.com/docs": { status: "alive", httpStatus: 200, detail: "fixture" },
+    },
+  });
+
+  const payload = createExportPayload("", analysis, {
+    mode: "topic",
+    format: "json",
+    removeDeadLinks: false,
+    removeDuplicates: false,
+    excludedIds: ["1"],
+  });
+
+  const parsed = JSON.parse(payload.content);
+  assert.ok(parsed.items.every((item) => item.id !== "1"));
+});
+
+test("createChromeBookmarkPayload respects excludedIds", async () => {
+  const rawText = createOriginalStructureBookmarks("https://example.com");
+  const analysis = await analyzeBookmarks(rawText, {
+    linkCheckMode: "none",
+    linkStatusOverrides: {
+      "https://example.com/alive": { status: "alive", httpStatus: 200, detail: "fixture" },
+      "https://example.com/missing": { status: "alive", httpStatus: 200, detail: "fixture" },
+    },
+  });
+
+  const payload = createChromeBookmarkPayload(rawText, analysis, {
+    mode: "original",
+    removeDeadLinks: false,
+    removeDuplicates: false,
+    excludedIds: ["1"],
+  });
+
+  const parsed = JSON.parse(payload.content);
+  const folderA = parsed.roots.bookmark_bar.children.find((c) => c.name === "Folder A");
+  assert.ok(folderA);
+  assert.ok(folderA.children.every((c) => c.id !== "1"));
+  assert.equal(payload.exportedSize, 1);
+});

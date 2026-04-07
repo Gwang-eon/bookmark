@@ -33,6 +33,38 @@ const host = process.env.HOST || (localFileAccessMode ? "127.0.0.1" : "0.0.0.0")
 const port = Number(process.env.PORT || 3210);
 const sessionToken = createSessionToken();
 
+const CACHE_TTL_MS = 30 * 60 * 1000;
+const analysisCache = new Map();
+
+function cacheAnalysis(fingerprint, entry) {
+  analysisCache.set(fingerprint, { ...entry, cachedAt: Date.now() });
+}
+
+function getCachedAnalysis(fingerprint) {
+  const entry = analysisCache.get(fingerprint);
+  if (!entry) {
+    return null;
+  }
+  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+    analysisCache.delete(fingerprint);
+    return null;
+  }
+  return entry;
+}
+
+function evictCache(fingerprint) {
+  analysisCache.delete(fingerprint);
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of analysisCache) {
+    if (now - entry.cachedAt > CACHE_TTL_MS) {
+      analysisCache.delete(key);
+    }
+  }
+}, 5 * 60 * 1000).unref();
+
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -164,11 +196,13 @@ async function handleAnalyze(request, response) {
   }
 
   const analysis = await analyzeBookmarks(body.rawText, body.options ?? {});
+  const fingerprint = computeContentFingerprint(body.rawText);
+  cacheAnalysis(fingerprint, { analysis, rawText: body.rawText });
   return {
     analysis,
     analysisContext: {
       kind: "upload",
-      sourceFingerprint: computeContentFingerprint(body.rawText),
+      sourceFingerprint: fingerprint,
     },
   };
 }
@@ -186,6 +220,8 @@ async function handleAnalyzePath(request, response) {
 
   const { rawText, resolvedPath } = await readBookmarksFile(body.path);
   const analysis = await analyzeBookmarks(rawText, body.options ?? {});
+  const fingerprint = computeContentFingerprint(rawText);
+  cacheAnalysis(fingerprint, { analysis, rawText });
   return {
     rawText,
     resolvedPath,
@@ -193,7 +229,7 @@ async function handleAnalyzePath(request, response) {
     analysisContext: {
       kind: "path",
       resolvedPath,
-      sourceFingerprint: computeContentFingerprint(rawText),
+      sourceFingerprint: fingerprint,
     },
     backups: await listBackups(resolvedPath),
   };
@@ -229,8 +265,30 @@ async function handleApply(request, response) {
   }
 
   const body = await readBody(request);
-  if (!body.path || !body.rawText || !body.analysis || !body.analysisContext) {
-    sendJson(response, 400, { error: "path, rawText, analysis, analysisContext가 필요합니다." });
+  if (!body.path || !body.analysisContext) {
+    sendJson(response, 400, { error: "path와 analysisContext가 필요합니다." });
+    return null;
+  }
+
+  let rawText = body.rawText;
+  let analysis = body.analysis;
+
+  if (!rawText || !analysis) {
+    const fingerprint = body.analysisContext?.sourceFingerprint;
+    if (fingerprint) {
+      const cached = getCachedAnalysis(fingerprint);
+      if (cached) {
+        rawText = cached.rawText;
+        analysis = cached.analysis;
+      }
+    }
+  }
+
+  if (!rawText || !analysis) {
+    sendJson(response, 400, {
+      error: "캐시에서 분석 결과를 찾을 수 없습니다. 전체 데이터를 포함하여 다시 시도하세요.",
+      code: "CACHE_MISS",
+    });
     return null;
   }
 
@@ -240,7 +298,7 @@ async function handleApply(request, response) {
     requestedPath: body.path,
     resolvedPath,
     currentFingerprint: computeContentFingerprint(currentRawText),
-    sourceFingerprint: computeContentFingerprint(body.rawText),
+    sourceFingerprint: computeContentFingerprint(rawText),
   });
   if (validationError) {
     sendJson(response, 409, { error: validationError });
@@ -252,18 +310,23 @@ async function handleApply(request, response) {
     rawText: currentRawText,
   });
 
-  const nextPayload = createChromeBookmarkPayload(body.rawText, body.analysis, body.options ?? {});
+  const nextPayload = createChromeBookmarkPayload(rawText, analysis, body.options ?? {});
   await writeBookmarksFile(resolvedPath, nextPayload.content);
 
-  const analysis = await analyzeBookmarks(nextPayload.content, body.analysisOptions ?? {});
+  evictCache(body.analysisContext.sourceFingerprint);
+
+  const newAnalysis = await analyzeBookmarks(nextPayload.content, body.analysisOptions ?? {});
+  const newFingerprint = computeContentFingerprint(nextPayload.content);
+  cacheAnalysis(newFingerprint, { analysis: newAnalysis, rawText: nextPayload.content });
+
   return {
     resolvedPath,
     rawText: nextPayload.content,
-    analysis,
+    analysis: newAnalysis,
     analysisContext: {
       kind: "path",
       resolvedPath,
-      sourceFingerprint: computeContentFingerprint(nextPayload.content),
+      sourceFingerprint: newFingerprint,
     },
     backup,
     backups: await listBackups(resolvedPath),
@@ -301,12 +364,30 @@ async function handleRollback(request, response) {
 
 async function handleExport(request, response) {
   const body = await readBody(request);
-  if (!body.rawText || !body.analysis) {
-    sendJson(response, 400, { error: "rawText와 analysis가 필요합니다." });
+
+  let rawText = body.rawText;
+  let analysis = body.analysis;
+
+  if (!rawText || !analysis) {
+    const fingerprint = body.sourceFingerprint;
+    if (fingerprint) {
+      const cached = getCachedAnalysis(fingerprint);
+      if (cached) {
+        rawText = cached.rawText;
+        analysis = cached.analysis;
+      }
+    }
+  }
+
+  if (!rawText || !analysis) {
+    sendJson(response, 400, {
+      error: "rawText와 analysis가 필요합니다. (또는 sourceFingerprint로 캐시 조회)",
+      code: "CACHE_MISS",
+    });
     return null;
   }
 
-  const payload = createExportPayload(body.rawText, body.analysis, body.options ?? {});
+  const payload = createExportPayload(rawText, analysis, body.options ?? {});
   response.writeHead(200, {
     "Content-Type": payload.contentType,
     "Content-Disposition": `attachment; filename="bookmarks-organized.${payload.extension}"`,
@@ -340,11 +421,14 @@ async function handleAnalyzeStream(request, response) {
     },
   });
 
+  const fingerprint = computeContentFingerprint(body.rawText);
+  cacheAnalysis(fingerprint, { analysis, rawText: body.rawText });
+
   sendSseEvent(response, "result", {
     analysis,
     analysisContext: {
       kind: "upload",
-      sourceFingerprint: computeContentFingerprint(body.rawText),
+      sourceFingerprint: fingerprint,
     },
   });
 
@@ -378,6 +462,9 @@ async function handleAnalyzePathStream(request, response) {
     },
   });
 
+  const fingerprint = computeContentFingerprint(rawText);
+  cacheAnalysis(fingerprint, { analysis, rawText });
+
   sendSseEvent(response, "result", {
     rawText,
     resolvedPath,
@@ -385,7 +472,7 @@ async function handleAnalyzePathStream(request, response) {
     analysisContext: {
       kind: "path",
       resolvedPath,
-      sourceFingerprint: computeContentFingerprint(rawText),
+      sourceFingerprint: fingerprint,
     },
     backups: await listBackups(resolvedPath),
   });

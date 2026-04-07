@@ -8,6 +8,7 @@ const state = {
   localFileAccessMode: true,
   mode: "local",
   sessionToken: "",
+  excludedItemIds: new Set(),
 };
 
 const fileInput = document.getElementById("fileInput");
@@ -98,7 +99,7 @@ function renderTable(columns, rows) {
     <div class="table-wrap">
       <table>
         <thead>
-          <tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr>
+          <tr>${columns.map((column) => `<th>${column.rawLabel ?? escapeHtml(column.label)}</th>`).join("")}</tr>
         </thead>
         <tbody>
           ${rows
@@ -248,12 +249,31 @@ function sortItems(items) {
   }
 }
 
+function updateSelectionSummary() {
+  const totalItems = state.analysis?.items.length ?? 0;
+  const excludedCount = state.excludedItemIds.size;
+  const summaryEl = document.getElementById("selectionSummary");
+  if (summaryEl) {
+    summaryEl.textContent = excludedCount > 0
+      ? `${totalItems - excludedCount}개 포함 / ${excludedCount}개 제외 (전체 ${totalItems}개)`
+      : `전체 ${totalItems}개 포함`;
+  }
+}
+
 function renderBookmarks() {
   const allItems = sortItems(getVisibleItems());
   const limit = 200;
   const items = allItems.slice(0, limit);
+  const allVisibleSelected = items.length > 0 && items.every((item) => !state.excludedItemIds.has(item.id));
   bookmarkTable.innerHTML = renderTable(
     [
+      {
+        rawLabel: `<input type="checkbox" id="selectAllCheckbox" ${allVisibleSelected ? "checked" : ""} title="현재 표시된 항목 전체 선택/해제">`,
+        render: (row) => {
+          const checked = !state.excludedItemIds.has(row.id);
+          return `<input type="checkbox" class="bookmark-select" data-item-id="${escapeHtml(row.id)}" ${checked ? "checked" : ""}>`;
+        },
+      },
       { label: "제목", render: (row) => escapeHtml(row.title) },
       {
         label: "중요도",
@@ -267,6 +287,11 @@ function renderBookmarks() {
     ],
     items,
   ) + truncationNotice(allItems.length, limit);
+  updateSelectionSummary();
+  const selectionToolbar = document.getElementById("selectionToolbar");
+  if (selectionToolbar) {
+    selectionToolbar.classList.toggle("hidden", !state.analysis);
+  }
 }
 
 function formatSize(bytes) {
@@ -437,8 +462,10 @@ async function postJson(url, payload, options = {}) {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "요청 실패" }));
-    throw new Error(error.error || "요청 실패");
+    const body = await response.json().catch(() => ({ error: "요청 실패" }));
+    const err = new Error(body.error || "요청 실패");
+    err.code = body.code || null;
+    throw err;
   }
 
   const contentType = response.headers.get("content-type") || "";
@@ -472,6 +499,51 @@ async function refreshBackups() {
   updateApplyAvailability();
 }
 
+bookmarkTable.addEventListener("change", (event) => {
+  if (event.target.id === "selectAllCheckbox") {
+    const visibleItems = sortItems(getVisibleItems()).slice(0, 200);
+    if (event.target.checked) {
+      for (const item of visibleItems) {
+        state.excludedItemIds.delete(item.id);
+      }
+    } else {
+      for (const item of visibleItems) {
+        state.excludedItemIds.add(item.id);
+      }
+    }
+    renderBookmarks();
+    return;
+  }
+
+  const checkbox = event.target.closest(".bookmark-select");
+  if (!checkbox) {
+    return;
+  }
+
+  const itemId = checkbox.dataset.itemId;
+  if (checkbox.checked) {
+    state.excludedItemIds.delete(itemId);
+  } else {
+    state.excludedItemIds.add(itemId);
+  }
+  updateSelectionSummary();
+});
+
+document.getElementById("includeAllButton").addEventListener("click", () => {
+  state.excludedItemIds.clear();
+  renderBookmarks();
+});
+
+document.getElementById("excludeAllButton").addEventListener("click", () => {
+  if (!state.analysis) {
+    return;
+  }
+  for (const item of state.analysis.items) {
+    state.excludedItemIds.add(item.id);
+  }
+  renderBookmarks();
+});
+
 backupTable.addEventListener("click", async (event) => {
   const button = event.target.closest(".rollback-button");
   if (!button) {
@@ -502,6 +574,7 @@ backupTable.addEventListener("click", async (event) => {
     state.analysis = payload.analysis;
     state.analysisContext = payload.analysisContext;
     state.backups = payload.backups;
+    state.excludedItemIds = new Set();
     renderAnalysis(payload.analysis);
     setStatus(`롤백 완료: ${payload.restoredBackup.createdAt} 백업으로 복원했다.`);
   } catch (error) {
@@ -530,6 +603,7 @@ analyzeFileButton.addEventListener("click", async () => {
     });
     state.analysis = payload.analysis;
     state.analysisContext = payload.analysisContext;
+    state.excludedItemIds = new Set();
     await refreshBackups().catch(() => {
       state.backups = [];
     });
@@ -564,6 +638,7 @@ analyzePathButton.addEventListener("click", async () => {
     state.analysis = payload.analysis;
     state.analysisContext = payload.analysisContext;
     state.backups = payload.backups;
+    state.excludedItemIds = new Set();
     renderAnalysis(payload.analysis);
     updateApplyAvailability();
     setStatus(`분석 완료: 북마크 ${payload.analysis.summary.totalBookmarks}개`);
@@ -583,14 +658,29 @@ downloadButton.addEventListener("click", async () => {
 
   setStatus("정리된 파일을 생성 중이다.");
   try {
-    const blob = await postJson("/api/export", {
-      rawText: state.rawText,
-      analysis: state.analysis,
-      options: {
-        ...getCleanupOptions(),
-        format: exportFormat.value,
-      },
-    });
+    const exportOptions = {
+      ...getCleanupOptions(),
+      format: exportFormat.value,
+      excludedIds: [...state.excludedItemIds],
+    };
+
+    let blob;
+    try {
+      blob = await postJson("/api/export", {
+        sourceFingerprint: state.analysisContext?.sourceFingerprint,
+        options: exportOptions,
+      });
+    } catch (cacheError) {
+      if (cacheError.code === "CACHE_MISS") {
+        blob = await postJson("/api/export", {
+          rawText: state.rawText,
+          analysis: state.analysis,
+          options: exportOptions,
+        });
+      } else {
+        throw cacheError;
+      }
+    }
 
     const href = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -645,14 +735,31 @@ applyButton.addEventListener("click", async () => {
 
   setStatus("현재 파일을 백업한 뒤 정리본을 직접 적용 중이다.");
   try {
-    const payload = await postJson("/api/apply", {
+    const applyOptions = {
+      ...getCleanupOptions(),
+      excludedIds: [...state.excludedItemIds],
+    };
+    const basePayload = {
       path: targetPath,
-      rawText: state.rawText,
-      analysis: state.analysis,
       analysisContext: state.analysisContext,
-      options: getCleanupOptions(),
+      options: applyOptions,
       analysisOptions: getAnalysisOptions(),
-    }, { includeSessionToken: true });
+    };
+
+    let payload;
+    try {
+      payload = await postJson("/api/apply", basePayload, { includeSessionToken: true });
+    } catch (cacheError) {
+      if (cacheError.code === "CACHE_MISS") {
+        payload = await postJson("/api/apply", {
+          ...basePayload,
+          rawText: state.rawText,
+          analysis: state.analysis,
+        }, { includeSessionToken: true });
+      } else {
+        throw cacheError;
+      }
+    }
 
     state.currentPath = payload.resolvedPath;
     pathInput.value = payload.resolvedPath;
@@ -660,6 +767,7 @@ applyButton.addEventListener("click", async () => {
     state.analysis = payload.analysis;
     state.analysisContext = payload.analysisContext;
     state.backups = payload.backups;
+    state.excludedItemIds = new Set();
     renderAnalysis(payload.analysis);
     updateApplyAvailability();
     setStatus(`적용 완료: ${payload.exportedSize}개 북마크를 현재 경로에 반영했다.`);

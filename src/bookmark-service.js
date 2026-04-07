@@ -726,12 +726,17 @@ function buildKeepIdSet(analysis, filterOptions = {}) {
     removeDeadLinks = true,
     removeSuspectLinks = false,
     removeDuplicates = true,
+    excludedIds = [],
   } = filterOptions;
 
+  const excludeSet = new Set(excludedIds);
   const dedupeKeepers = new Set(analysis.duplicateGroups.map((group) => group.keep.id));
   const keepIds = new Set();
 
   for (const item of analysis.items) {
+    if (excludeSet.has(item.id)) {
+      continue;
+    }
     if (removeDeadLinks && item.linkStatus === "dead") {
       continue;
     }
@@ -882,13 +887,17 @@ export function createExportPayload(rawText, analysis, exportOptions = {}) {
   const {
     mode = "original",
     removeDeadLinks = true,
+    removeSuspectLinks = false,
     removeDuplicates = true,
+    excludedIds = [],
     format = "html",
   } = exportOptions;
 
   const filteredItems = getFilteredItems(analysis, {
     removeDeadLinks,
+    removeSuspectLinks,
     removeDuplicates,
+    excludedIds,
     sortMode: mode === "original" ? "sequence" : "importance",
   });
 
@@ -1028,12 +1037,16 @@ function applyChildrenToRoots(parsed, analysis, options = {}) {
   const {
     mode = "original",
     removeDeadLinks = true,
+    removeSuspectLinks = false,
     removeDuplicates = true,
+    excludedIds = [],
   } = options;
 
   const filteredItems = getFilteredItems(analysis, {
     removeDeadLinks,
+    removeSuspectLinks,
     removeDuplicates,
+    excludedIds,
   });
 
   const { urlNodes, maxId } = collectOriginalUrlNodes(parsed.roots);
