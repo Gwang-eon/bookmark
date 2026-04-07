@@ -113,7 +113,7 @@ function renderSummary(analysis) {
       ([label, value]) => `
         <article class="summary-card">
           <span>${escapeHtml(label)}</span>
-          <strong>${value}</strong>
+          <strong>${escapeHtml(String(value))}</strong>
         </article>`,
     )
     .join("");
@@ -156,6 +156,15 @@ function truncationNotice(total, limit) {
   return `<p class="truncation-notice">외 ${total - limit}건이 더 있습니다. (총 ${total}건 중 ${limit}건 표시)</p>`;
 }
 
+function isSafeUrl(url) {
+  try {
+    const protocol = new URL(url).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function renderDeadLinks(analysis) {
   const limit = 50;
   deadLinksTable.innerHTML = renderTable(
@@ -164,8 +173,12 @@ function renderDeadLinks(analysis) {
       { label: "제목", render: (row) => escapeHtml(row.title) },
       {
         label: "URL",
-        render: (row) =>
-          `<a href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.domain)}</a>`,
+        render: (row) => {
+          if (isSafeUrl(row.url)) {
+            return `<a href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.domain)}</a>`;
+          }
+          return escapeHtml(row.domain);
+        },
       },
       { label: "폴더", render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
       {
@@ -322,6 +335,18 @@ function updateApplyAvailability() {
   applyButton.disabled = !canApply;
 }
 
+let operationInProgress = false;
+
+function setOperationLock(locked) {
+  operationInProgress = locked;
+  applyButton.disabled = locked || !state.analysis;
+  backupButton.disabled = locked;
+  refreshBackupsButton.disabled = locked;
+  for (const btn of backupTable.querySelectorAll(".rollback-button")) {
+    btn.disabled = locked;
+  }
+}
+
 function renderAnalysis(analysis) {
   renderSummary(analysis);
   renderSuggestions(analysis);
@@ -432,6 +457,11 @@ downloadButton.addEventListener("click", async () => {
 });
 
 backupButton.addEventListener("click", async () => {
+  if (operationInProgress) {
+    setStatus("다른 작업이 진행 중입니다.", "error");
+    return;
+  }
+  setOperationLock(true);
   setStatus("현재 북마크를 백업 중이다.");
   try {
     await createBackup("manual");
@@ -440,10 +470,16 @@ backupButton.addEventListener("click", async () => {
     setStatus("백업을 생성했다.");
   } catch (error) {
     setStatus(error.message, "error");
+  } finally {
+    setOperationLock(false);
   }
 });
 
 applyButton.addEventListener("click", async () => {
+  if (operationInProgress) {
+    setStatus("다른 작업이 진행 중입니다.", "error");
+    return;
+  }
   if (!state.analysis) {
     setStatus("먼저 분석 결과가 있어야 한다.", "error");
     return;
@@ -451,6 +487,7 @@ applyButton.addEventListener("click", async () => {
   if (!confirm("정리본을 브라우저 북마크에 직접 적용합니다.\n현재 북마크는 자동 백업됩니다. 계속하시겠습니까?")) {
     return;
   }
+  setOperationLock(true);
   setStatus("현재 북마크를 백업한 뒤 정리본을 적용 중이다.");
   try {
     await createBackup("pre-apply");
@@ -460,7 +497,6 @@ applyButton.addEventListener("click", async () => {
     } else {
       await applyReorganize(state.analysis, options, options.mode);
     }
-    // Re-analyze
     const tree = await chrome.bookmarks.getTree();
     state.rawText = chromeApiTreeToRawText(tree);
     state.analysis = await analyzeBookmarks(state.rawText, getAnalysisOptions());
@@ -471,6 +507,8 @@ applyButton.addEventListener("click", async () => {
     setStatus("적용 완료.");
   } catch (error) {
     setStatus(error.message, "error");
+  } finally {
+    setOperationLock(false);
   }
 });
 
@@ -487,7 +525,12 @@ refreshBackupsButton.addEventListener("click", async () => {
 backupTable.addEventListener("click", async (event) => {
   const button = event.target.closest(".rollback-button");
   if (!button) return;
+  if (operationInProgress) {
+    setStatus("다른 작업이 진행 중입니다.", "error");
+    return;
+  }
   if (!confirm("선택한 백업으로 롤백합니다. 현재 북마크는 자동 백업됩니다. 계속하시겠습니까?")) return;
+  setOperationLock(true);
   setStatus("선택한 백업으로 롤백 중이다.");
   try {
     await restoreBackup(button.dataset.backupId);
@@ -500,6 +543,8 @@ backupTable.addEventListener("click", async (event) => {
     setStatus("롤백 완료.");
   } catch (error) {
     setStatus(error.message, "error");
+  } finally {
+    setOperationLock(false);
   }
 });
 

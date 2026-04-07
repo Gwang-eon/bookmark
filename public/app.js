@@ -176,6 +176,15 @@ function truncationNotice(total, limit) {
   return `<p class="truncation-notice">외 ${total - limit}건이 더 있습니다. (총 ${total}건 중 ${limit}건 표시)</p>`;
 }
 
+function isSafeUrl(url) {
+  try {
+    const protocol = new URL(url).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function renderDeadLinks(analysis) {
   const limit = 50;
   deadLinksTable.innerHTML = renderTable(
@@ -184,8 +193,12 @@ function renderDeadLinks(analysis) {
       { label: "제목", render: (row) => escapeHtml(row.title) },
       {
         label: "URL",
-        render: (row) =>
-          `<a href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.domain)}</a>`,
+        render: (row) => {
+          if (isSafeUrl(row.url)) {
+            return `<a href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.domain)}</a>`;
+          }
+          return escapeHtml(row.domain);
+        },
       },
       { label: "폴더", render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
       {

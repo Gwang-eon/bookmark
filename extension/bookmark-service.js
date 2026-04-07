@@ -483,6 +483,7 @@ async function probeUrl(url, timeoutMs) {
       const response = await fetch(url, {
         method,
         redirect: "follow",
+        credentials: "omit",
         signal: AbortSignal.timeout(timeoutMs),
       });
 

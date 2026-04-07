@@ -1,3 +1,5 @@
+import { computeContentFingerprint } from "./crypto-utils.js";
+
 const BACKUP_KEY = "bookmark_backups_index";
 const BACKUP_DATA_PREFIX = "backup_data_";
 const MAX_BACKUPS = 20;
@@ -12,11 +14,13 @@ export async function createBackup(reason = "manual") {
   });
 
   const { [BACKUP_KEY]: index = [] } = await chrome.storage.local.get(BACKUP_KEY);
+  const checksum = await computeContentFingerprint(snapshot);
   const entry = {
     id,
     createdAt: new Date().toISOString(),
     reason,
     size: snapshot.length,
+    checksum,
   };
 
   index.unshift(entry);
@@ -44,6 +48,15 @@ export async function restoreBackup(backupId) {
 
   if (!snapshot) {
     throw new Error("백업을 찾을 수 없습니다.");
+  }
+
+  const { [BACKUP_KEY]: index = [] } = await chrome.storage.local.get(BACKUP_KEY);
+  const backupEntry = index.find((e) => e.id === backupId);
+  if (backupEntry?.checksum) {
+    const currentChecksum = await computeContentFingerprint(snapshot);
+    if (currentChecksum !== backupEntry.checksum) {
+      throw new Error("백업 데이터 무결성 검증 실패. 복원을 중단합니다.");
+    }
   }
 
   const savedTree = JSON.parse(snapshot);
@@ -82,9 +95,21 @@ async function recreateFromSnapshot(savedTree) {
   }
 }
 
+function isSafeBookmarkUrl(url) {
+  try {
+    const protocol = new URL(url).protocol;
+    return ["http:", "https:", "ftp:", "file:"].includes(protocol);
+  } catch {
+    return false;
+  }
+}
+
 async function recreateChildren(parentId, children) {
   for (const child of children) {
     if (child.url) {
+      if (!isSafeBookmarkUrl(child.url)) {
+        continue;
+      }
       await chrome.bookmarks.create({
         parentId,
         title: child.title,
