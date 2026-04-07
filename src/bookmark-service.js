@@ -297,21 +297,33 @@ function computeRecencyScore(dateValues, dateAddedMs) {
   return Math.round(Math.max(0, Math.min(1, ratio)) * 15);
 }
 
-function computeImportanceScore(item, dateValues) {
-  const rootScore = {
-    bookmark_bar: 35,
-    other: 18,
-    synced: 12,
-  }[item.root] ?? 10;
+const IMPORTANCE_WEIGHTS = {
+  root: { bookmark_bar: 35, other: 18, synced: 12, fallback: 10 },
+  depthBase: 24,
+  depthStep: 6,
+  orderBase: 12,
+  orderStep: 2,
+  folderPriority: 8,
+  https: 4,
+  titleGood: 4,
+  titleWeak: 1,
+  titleMaxLength: 60,
+  duplicatePenalty: 12,
+  deadPenalty: 50,
+  suspectPenalty: 18,
+};
 
-  const depthScore = Math.max(0, 24 - item.depth * 6);
-  const orderScore = Math.max(0, 12 - item.siblingIndex * 2);
+function computeImportanceScore(item, dateValues) {
+  const w = IMPORTANCE_WEIGHTS;
+  const rootScore = w.root[item.root] ?? w.root.fallback;
+  const depthScore = Math.max(0, w.depthBase - item.depth * w.depthStep);
+  const orderScore = Math.max(0, w.orderBase - item.siblingIndex * w.orderStep);
   const recencyScore = computeRecencyScore(dateValues, item.dateAddedMs);
-  const folderScore = item.folderPath.some((folder) => FOLDER_PRIORITY_RE.test(folder)) ? 8 : 0;
-  const httpsScore = item.url.startsWith("https://") ? 4 : 0;
-  const titleScore = item.title && item.title.length <= 60 ? 4 : 1;
-  const duplicatePenalty = item.duplicateCount > 1 ? 12 : 0;
-  const deadPenalty = item.linkStatus === "dead" ? 50 : item.linkStatus === "suspect" ? 18 : 0;
+  const folderScore = item.folderPath.some((folder) => FOLDER_PRIORITY_RE.test(folder)) ? w.folderPriority : 0;
+  const httpsScore = item.url.startsWith("https://") ? w.https : 0;
+  const titleScore = item.title && item.title.length <= w.titleMaxLength ? w.titleGood : w.titleWeak;
+  const duplicatePenalty = item.duplicateCount > 1 ? w.duplicatePenalty : 0;
+  const deadPenalty = item.linkStatus === "dead" ? w.deadPenalty : item.linkStatus === "suspect" ? w.suspectPenalty : 0;
 
   const score = rootScore + depthScore + orderScore + recencyScore + folderScore + httpsScore + titleScore - duplicatePenalty - deadPenalty;
 
@@ -419,6 +431,7 @@ export async function checkLinkStatuses(items, options = {}) {
     timeoutMs = 4500,
     mode = "quick",
     maxQuickChecks = 200,
+    onProgress = null,
   } = options;
 
   const uniqueUrls = [...new Map(items.map((item) => [item.normalizedUrl, item.url])).entries()];
@@ -426,6 +439,8 @@ export async function checkLinkStatuses(items, options = {}) {
     mode === "none" ? [] : mode === "quick" ? uniqueUrls.slice(0, maxQuickChecks) : uniqueUrls;
 
   const statusMap = new Map();
+  const total = limitedEntries.length;
+  let checked = 0;
 
   for (const item of items) {
     if (!/^https?:\/\//i.test(item.url)) {
@@ -444,10 +459,18 @@ export async function checkLinkStatuses(items, options = {}) {
       const index = cursor++;
       const [normalizedUrl, originalUrl] = limitedEntries[index];
       if (statusMap.has(normalizedUrl)) {
+        checked++;
+        if (onProgress) {
+          onProgress({ checked, total });
+        }
         continue;
       }
 
       statusMap.set(normalizedUrl, await probeUrl(originalUrl, timeoutMs));
+      checked++;
+      if (onProgress) {
+        onProgress({ checked, total });
+      }
     }
   }
 
@@ -541,6 +564,7 @@ export async function analyzeBookmarks(rawText, options = {}) {
       timeoutMs: options.timeoutMs,
       mode: options.linkCheckMode ?? "quick",
       maxQuickChecks: options.maxQuickChecks,
+      onProgress: options.onProgress ?? null,
     }));
 
   const dateValues = items
@@ -576,18 +600,22 @@ export async function analyzeBookmarks(rawText, options = {}) {
     };
   });
 
-  const duplicateGroups = [...new Map(enrichedItems.map((item) => [item.normalizedUrl, []])).entries()]
-    .map(([key]) => ({
-      key,
-      items: sortByImportance(enrichedItems.filter((item) => item.normalizedUrl === key)),
-    }))
-    .filter((group) => group.items.length > 1)
-    .map((group) => ({
-      key: group.key,
-      count: group.items.length,
-      keep: group.items[0],
-      items: group.items,
-    }))
+  const duplicateGroupMap = new Map();
+  for (const item of enrichedItems) {
+    let group = duplicateGroupMap.get(item.normalizedUrl);
+    if (!group) {
+      group = [];
+      duplicateGroupMap.set(item.normalizedUrl, group);
+    }
+    group.push(item);
+  }
+
+  const duplicateGroups = [...duplicateGroupMap.entries()]
+    .filter(([, items]) => items.length > 1)
+    .map(([key, items]) => {
+      const sorted = sortByImportance(items);
+      return { key, count: sorted.length, keep: sorted[0], items: sorted };
+    })
     .sort((left, right) => right.count - left.count || right.keep.importanceScore - left.keep.importanceScore);
 
   const sortedItems = sortByImportance(enrichedItems);
@@ -595,14 +623,23 @@ export async function analyzeBookmarks(rawText, options = {}) {
   const domainSummary = summarizeBy(sortedItems, (item) => item.domain).slice(0, 25);
   const topicSummary = summarizeBy(sortedItems, (item) => item.topic).slice(0, 25);
 
+  const linkStatusCounts = { dead: 0, suspect: 0, alive: 0, unchecked: 0, special: 0 };
+  const uniqueUrlSet = new Set();
+  for (const item of sortedItems) {
+    if (linkStatusCounts[item.linkStatus] !== undefined) {
+      linkStatusCounts[item.linkStatus]++;
+    }
+    uniqueUrlSet.add(item.normalizedUrl);
+  }
+
   const summary = {
     totalBookmarks: sortedItems.length,
-    uniqueUrls: new Set(sortedItems.map((item) => item.normalizedUrl)).size,
-    deadLinks: sortedItems.filter((item) => item.linkStatus === "dead").length,
-    suspectLinks: sortedItems.filter((item) => item.linkStatus === "suspect").length,
-    aliveLinks: sortedItems.filter((item) => item.linkStatus === "alive").length,
-    uncheckedLinks: sortedItems.filter((item) => item.linkStatus === "unchecked").length,
-    specialLinks: sortedItems.filter((item) => item.linkStatus === "special").length,
+    uniqueUrls: uniqueUrlSet.size,
+    deadLinks: linkStatusCounts.dead,
+    suspectLinks: linkStatusCounts.suspect,
+    aliveLinks: linkStatusCounts.alive,
+    uncheckedLinks: linkStatusCounts.unchecked,
+    specialLinks: linkStatusCounts.special,
     duplicateGroups: duplicateGroups.length,
     duplicateBookmarks: duplicateGroups.reduce((sum, group) => sum + group.count - 1, 0),
     topicCount: topicSummary.length,
@@ -651,7 +688,7 @@ function createUrlNode(item) {
 }
 
 function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
+  return structuredClone(value);
 }
 
 function addPath(rootFolder, pathSegments, item) {
@@ -687,6 +724,7 @@ function getModePathSegments(item, mode) {
 function buildKeepIdSet(analysis, filterOptions = {}) {
   const {
     removeDeadLinks = true,
+    removeSuspectLinks = false,
     removeDuplicates = true,
   } = filterOptions;
 
@@ -694,7 +732,10 @@ function buildKeepIdSet(analysis, filterOptions = {}) {
   const keepIds = new Set();
 
   for (const item of analysis.items) {
-    if (removeDeadLinks && (item.linkStatus === "dead" || item.linkStatus === "suspect")) {
+    if (removeDeadLinks && item.linkStatus === "dead") {
+      continue;
+    }
+    if (removeSuspectLinks && item.linkStatus === "suspect") {
       continue;
     }
     if (removeDuplicates && item.duplicateCount > 1 && !dedupeKeepers.has(item.id)) {

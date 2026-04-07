@@ -33,6 +33,7 @@ const downloadButton = document.getElementById("downloadButton");
 const exportMode = document.getElementById("exportMode");
 const exportFormat = document.getElementById("exportFormat");
 const removeDeadLinks = document.getElementById("removeDeadLinks");
+const removeSuspectLinks = document.getElementById("removeSuspectLinks");
 const removeDuplicates = document.getElementById("removeDuplicates");
 const backupStorePath = document.getElementById("backupStorePath");
 const localAccessCard = document.getElementById("localAccessCard");
@@ -59,6 +60,7 @@ function getCleanupOptions() {
   return {
     mode: exportMode.value,
     removeDeadLinks: removeDeadLinks.checked,
+    removeSuspectLinks: removeSuspectLinks.checked,
     removeDuplicates: removeDuplicates.checked,
   };
 }
@@ -143,6 +145,7 @@ function renderSuggestions(analysis) {
 }
 
 function renderDomainAndTopicTables(analysis) {
+  const domainLimit = 12;
   domainTable.innerHTML = renderTable(
     [
       { label: "도메인", render: (row) => escapeHtml(row.key) },
@@ -150,9 +153,10 @@ function renderDomainAndTopicTables(analysis) {
       { label: "죽은 링크", render: (row) => String(row.deadCount) },
       { label: "높은 중요도", render: (row) => String(row.highImportanceCount) },
     ],
-    analysis.domainSummary.slice(0, 12),
-  );
+    analysis.domainSummary.slice(0, domainLimit),
+  ) + truncationNotice(analysis.domainSummary.length, domainLimit);
 
+  const topicLimit = 12;
   topicTable.innerHTML = renderTable(
     [
       { label: "주제", render: (row) => escapeHtml(row.key) },
@@ -160,11 +164,19 @@ function renderDomainAndTopicTables(analysis) {
       { label: "죽은 링크", render: (row) => String(row.deadCount) },
       { label: "높은 중요도", render: (row) => String(row.highImportanceCount) },
     ],
-    analysis.topicSummary.slice(0, 12),
-  );
+    analysis.topicSummary.slice(0, topicLimit),
+  ) + truncationNotice(analysis.topicSummary.length, topicLimit);
+}
+
+function truncationNotice(total, limit) {
+  if (total <= limit) {
+    return "";
+  }
+  return `<p class="truncation-notice">외 ${total - limit}건이 더 있습니다. (총 ${total}건 중 ${limit}건 표시)</p>`;
 }
 
 function renderDeadLinks(analysis) {
+  const limit = 50;
   deadLinksTable.innerHTML = renderTable(
     [
       { label: "상태", render: (row) => badge(row.linkStatus, row.linkStatus) },
@@ -180,8 +192,8 @@ function renderDeadLinks(analysis) {
         render: (row) => escapeHtml(row.httpStatus ? String(row.httpStatus) : row.linkDetail || "-"),
       },
     ],
-    analysis.deadLinks.slice(0, 50),
-  );
+    analysis.deadLinks.slice(0, limit),
+  ) + truncationNotice(analysis.deadLinks.length, limit);
 }
 
 function renderDuplicates(analysis) {
@@ -190,8 +202,9 @@ function renderDuplicates(analysis) {
     return;
   }
 
+  const limit = 20;
   duplicateList.innerHTML = analysis.duplicateGroups
-    .slice(0, 20)
+    .slice(0, limit)
     .map(
       (group) => `
         <article class="duplicate-card">
@@ -200,7 +213,7 @@ function renderDuplicates(analysis) {
           <p>중복 ${group.count}개, 대표 유지: ${escapeHtml(group.keep.rootLabel)} / ${escapeHtml(group.keep.pathLabel)}</p>
         </article>`,
     )
-    .join("");
+    .join("") + truncationNotice(analysis.duplicateGroups.length, limit);
 }
 
 function getVisibleItems() {
@@ -236,7 +249,9 @@ function sortItems(items) {
 }
 
 function renderBookmarks() {
-  const items = sortItems(getVisibleItems()).slice(0, 200);
+  const allItems = sortItems(getVisibleItems());
+  const limit = 200;
+  const items = allItems.slice(0, limit);
   bookmarkTable.innerHTML = renderTable(
     [
       { label: "제목", render: (row) => escapeHtml(row.title) },
@@ -251,7 +266,7 @@ function renderBookmarks() {
       { label: "폴더", render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
     ],
     items,
-  );
+  ) + truncationNotice(allItems.length, limit);
 }
 
 function formatSize(bytes) {
@@ -305,7 +320,11 @@ function updateLocalModeUi() {
     refreshBackupsButton.disabled = true;
     pathInput.disabled = true;
     localAccessCard.classList.add("hidden");
-    loadCard.querySelector(".hint-list").innerHTML += "<p>remote 모드에서는 업로드 기반 분석만 사용할 수 있다.</p>";
+    const hintList = loadCard.querySelector(".hint-list");
+    if (!hintList.dataset.remoteHintAdded) {
+      hintList.innerHTML += "<p>remote 모드에서는 업로드 기반 분석만 사용할 수 있다.</p>";
+      hintList.dataset.remoteHintAdded = "true";
+    }
     return;
   }
 
@@ -340,6 +359,62 @@ function renderAnalysis(analysis) {
   renderBookmarks();
   renderBackups();
   resultsSection.classList.remove("hidden");
+}
+
+async function postSseJson(url, payload, options = {}) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildRequestHeaders(options.includeSessionToken),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "요청 실패" }));
+    throw new Error(error.error || "요청 실패");
+  }
+
+  return new Promise((resolve, reject) => {
+    let result = null;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    function processChunk({ done, value }) {
+      if (done) {
+        if (result) {
+          resolve(result);
+        } else {
+          reject(new Error("스트림이 결과 없이 종료되었습니다."));
+        }
+        return;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      let currentEvent = "";
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith("data: ")) {
+          const data = JSON.parse(line.slice(6));
+          if (currentEvent === "progress" && options.onProgress) {
+            options.onProgress(data);
+          } else if (currentEvent === "result") {
+            result = data;
+          }
+        }
+      }
+
+      reader.read().then(processChunk).catch(reject);
+    }
+
+    reader.read().then(processChunk).catch(reject);
+  });
 }
 
 async function getJson(url) {
@@ -409,6 +484,10 @@ backupTable.addEventListener("click", async (event) => {
     return;
   }
 
+  if (!confirm("선택한 백업으로 롤백합니다. 현재 파일은 자동 백업됩니다. 계속하시겠습니까?")) {
+    return;
+  }
+
   setStatus("선택한 백업으로 롤백 중이다.");
   try {
     const payload = await postJson("/api/rollback", {
@@ -441,9 +520,13 @@ analyzeFileButton.addEventListener("click", async () => {
   try {
     state.currentPath = getTargetPath();
     state.rawText = await file.text();
-    const payload = await postJson("/api/analyze", {
+    const payload = await postSseJson("/api/analyze-stream", {
       rawText: state.rawText,
       options: getAnalysisOptions(),
+    }, {
+      onProgress: ({ checked, total }) => {
+        setStatus(`링크 검사 중: ${checked} / ${total}`);
+      },
     });
     state.analysis = payload.analysis;
     state.analysisContext = payload.analysisContext;
@@ -466,10 +549,15 @@ analyzePathButton.addEventListener("click", async () => {
 
   setStatus("로컬 경로에서 북마크 파일을 읽고 분석 중이다.");
   try {
-    const payload = await postJson("/api/analyze-path", {
+    const payload = await postSseJson("/api/analyze-path-stream", {
       path: pathInput.value.trim(),
       options: getAnalysisOptions(),
-    }, { includeSessionToken: true });
+    }, {
+      includeSessionToken: true,
+      onProgress: ({ checked, total }) => {
+        setStatus(`링크 검사 중: ${checked} / ${total}`);
+      },
+    });
     state.currentPath = payload.resolvedPath;
     pathInput.value = payload.resolvedPath;
     state.rawText = payload.rawText;
@@ -551,6 +639,10 @@ applyButton.addEventListener("click", async () => {
     return;
   }
 
+  if (!confirm(`"${targetPath}" 파일에 정리본을 직접 적용합니다.\n기존 파일은 자동 백업됩니다. 계속하시겠습니까?`)) {
+    return;
+  }
+
   setStatus("현재 파일을 백업한 뒤 정리본을 직접 적용 중이다.");
   try {
     const payload = await postJson("/api/apply", {
@@ -591,8 +683,16 @@ async function bootstrap() {
     state.backupStorePath = health.backupStorePath;
     state.localFileAccessMode = Boolean(health.localFileAccessMode);
     state.mode = health.mode;
-    state.sessionToken = health.sessionToken || "";
     backupStorePath.textContent = health.backupStorePath || "remote 모드";
+
+    if (state.localFileAccessMode) {
+      try {
+        const session = await postJson("/api/session", {});
+        state.sessionToken = session.sessionToken || "";
+      } catch {
+        state.sessionToken = "";
+      }
+    }
     updateLocalModeUi();
 
     if (Array.isArray(health.detectedChromePaths) && health.detectedChromePaths.length) {

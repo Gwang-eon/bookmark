@@ -70,14 +70,30 @@ function requireLocalFileAccess(response) {
   return false;
 }
 
+const MAX_BODY_BYTES = 50 * 1024 * 1024; // 50 MB
+
 async function readBody(request) {
   const chunks = [];
+  let totalBytes = 0;
+
   for await (const chunk of request) {
+    totalBytes += chunk.length;
+    if (totalBytes > MAX_BODY_BYTES) {
+      throw new Error(`요청 본문이 너무 큽니다. 최대 ${MAX_BODY_BYTES / 1024 / 1024}MB까지 허용됩니다.`);
+    }
     chunks.push(chunk);
   }
 
   const text = Buffer.concat(chunks).toString("utf8");
-  return text ? JSON.parse(text) : {};
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("요청 본문이 올바른 JSON 형식이 아닙니다.");
+  }
 }
 
 async function serveStatic(response, requestPath) {
@@ -102,228 +118,317 @@ async function serveStatic(response, requestPath) {
   }
 }
 
+async function handleHealth(_request, _response, _url) {
+  return {
+    ok: true,
+    port,
+    host,
+    mode: localFileAccessMode ? "local" : "remote",
+    localFileAccessMode,
+    defaultChromePaths: getDefaultChromePaths(),
+    detectedChromePaths: localFileAccessMode ? await detectChromeBookmarkFiles() : [],
+    backupStorePath: localFileAccessMode ? getBackupStorePath() : null,
+  };
+}
+
+async function handleSession(_request, response) {
+  if (!localFileAccessMode) {
+    sendJson(response, 403, { error: "remote 모드에서는 세션 토큰을 발급하지 않습니다." });
+    return null;
+  }
+  return { sessionToken };
+}
+
+async function handleBackups(request, response, requestUrl) {
+  if (!requireLocalFileAccess(response) || !requireSessionToken(request, response)) {
+    return null;
+  }
+
+  const targetPath = requestUrl.searchParams.get("path");
+  if (!targetPath) {
+    sendJson(response, 400, { error: "path가 필요합니다." });
+    return null;
+  }
+
+  return {
+    resolvedPath: resolveInputPath(targetPath),
+    backups: await listBackups(targetPath),
+  };
+}
+
+async function handleAnalyze(request, response) {
+  const body = await readBody(request);
+  if (!body.rawText) {
+    sendJson(response, 400, { error: "rawText가 필요합니다." });
+    return null;
+  }
+
+  const analysis = await analyzeBookmarks(body.rawText, body.options ?? {});
+  return {
+    analysis,
+    analysisContext: {
+      kind: "upload",
+      sourceFingerprint: computeContentFingerprint(body.rawText),
+    },
+  };
+}
+
+async function handleAnalyzePath(request, response) {
+  if (!requireLocalFileAccess(response) || !requireSessionToken(request, response)) {
+    return null;
+  }
+
+  const body = await readBody(request);
+  if (!body.path) {
+    sendJson(response, 400, { error: "path가 필요합니다." });
+    return null;
+  }
+
+  const { rawText, resolvedPath } = await readBookmarksFile(body.path);
+  const analysis = await analyzeBookmarks(rawText, body.options ?? {});
+  return {
+    rawText,
+    resolvedPath,
+    analysis,
+    analysisContext: {
+      kind: "path",
+      resolvedPath,
+      sourceFingerprint: computeContentFingerprint(rawText),
+    },
+    backups: await listBackups(resolvedPath),
+  };
+}
+
+async function handleBackup(request, response) {
+  if (!requireLocalFileAccess(response) || !requireSessionToken(request, response)) {
+    return null;
+  }
+
+  const body = await readBody(request);
+  if (!body.path) {
+    sendJson(response, 400, { error: "path가 필요합니다." });
+    return null;
+  }
+
+  const { resolvedPath, rawText } = await readBookmarksFile(body.path);
+  const backup = await createCompressedBackup(resolvedPath, {
+    reason: body.reason ?? "manual",
+    rawText,
+  });
+
+  return {
+    resolvedPath,
+    backup,
+    backups: await listBackups(resolvedPath),
+  };
+}
+
+async function handleApply(request, response) {
+  if (!requireLocalFileAccess(response) || !requireSessionToken(request, response)) {
+    return null;
+  }
+
+  const body = await readBody(request);
+  if (!body.path || !body.rawText || !body.analysis || !body.analysisContext) {
+    sendJson(response, 400, { error: "path, rawText, analysis, analysisContext가 필요합니다." });
+    return null;
+  }
+
+  const { rawText: currentRawText, resolvedPath } = await readBookmarksFile(body.path);
+  const validationError = validateApplyAnalysisContext({
+    analysisContext: body.analysisContext,
+    requestedPath: body.path,
+    resolvedPath,
+    currentFingerprint: computeContentFingerprint(currentRawText),
+    sourceFingerprint: computeContentFingerprint(body.rawText),
+  });
+  if (validationError) {
+    sendJson(response, 409, { error: validationError });
+    return null;
+  }
+
+  const backup = await createCompressedBackup(resolvedPath, {
+    reason: "pre-apply",
+    rawText: currentRawText,
+  });
+
+  const nextPayload = createChromeBookmarkPayload(body.rawText, body.analysis, body.options ?? {});
+  await writeBookmarksFile(resolvedPath, nextPayload.content);
+
+  const analysis = await analyzeBookmarks(nextPayload.content, body.analysisOptions ?? {});
+  return {
+    resolvedPath,
+    rawText: nextPayload.content,
+    analysis,
+    analysisContext: {
+      kind: "path",
+      resolvedPath,
+      sourceFingerprint: computeContentFingerprint(nextPayload.content),
+    },
+    backup,
+    backups: await listBackups(resolvedPath),
+    exportedSize: nextPayload.exportedSize,
+  };
+}
+
+async function handleRollback(request, response) {
+  if (!requireLocalFileAccess(response) || !requireSessionToken(request, response)) {
+    return null;
+  }
+
+  const body = await readBody(request);
+  if (!body.path || !body.backupId) {
+    sendJson(response, 400, { error: "path와 backupId가 필요합니다." });
+    return null;
+  }
+
+  const restored = await restoreBackup(body.path, body.backupId);
+  const analysis = await analyzeBookmarks(restored.rawText, body.analysisOptions ?? {});
+  return {
+    resolvedPath: restored.resolvedPath,
+    rawText: restored.rawText,
+    analysis,
+    analysisContext: {
+      kind: "path",
+      resolvedPath: restored.resolvedPath,
+      sourceFingerprint: computeContentFingerprint(restored.rawText),
+    },
+    restoredBackup: restored.backup,
+    safetyBackup: restored.safetyBackup,
+    backups: await listBackups(restored.resolvedPath),
+  };
+}
+
+async function handleExport(request, response) {
+  const body = await readBody(request);
+  if (!body.rawText || !body.analysis) {
+    sendJson(response, 400, { error: "rawText와 analysis가 필요합니다." });
+    return null;
+  }
+
+  const payload = createExportPayload(body.rawText, body.analysis, body.options ?? {});
+  response.writeHead(200, {
+    "Content-Type": payload.contentType,
+    "Content-Disposition": `attachment; filename="bookmarks-organized.${payload.extension}"`,
+  });
+  response.end(payload.content);
+  return null;
+}
+
+function sendSseEvent(response, event, data) {
+  response.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+async function handleAnalyzeStream(request, response) {
+  const body = await readBody(request);
+  if (!body.rawText) {
+    sendJson(response, 400, { error: "rawText가 필요합니다." });
+    return null;
+  }
+
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const options = body.options ?? {};
+  const analysis = await analyzeBookmarks(body.rawText, {
+    ...options,
+    onProgress: ({ checked, total }) => {
+      sendSseEvent(response, "progress", { checked, total });
+    },
+  });
+
+  sendSseEvent(response, "result", {
+    analysis,
+    analysisContext: {
+      kind: "upload",
+      sourceFingerprint: computeContentFingerprint(body.rawText),
+    },
+  });
+
+  response.end();
+  return null;
+}
+
+async function handleAnalyzePathStream(request, response) {
+  if (!requireLocalFileAccess(response) || !requireSessionToken(request, response)) {
+    return null;
+  }
+
+  const body = await readBody(request);
+  if (!body.path) {
+    sendJson(response, 400, { error: "path가 필요합니다." });
+    return null;
+  }
+
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const { rawText, resolvedPath } = await readBookmarksFile(body.path);
+  const options = body.options ?? {};
+  const analysis = await analyzeBookmarks(rawText, {
+    ...options,
+    onProgress: ({ checked, total }) => {
+      sendSseEvent(response, "progress", { checked, total });
+    },
+  });
+
+  sendSseEvent(response, "result", {
+    rawText,
+    resolvedPath,
+    analysis,
+    analysisContext: {
+      kind: "path",
+      resolvedPath,
+      sourceFingerprint: computeContentFingerprint(rawText),
+    },
+    backups: await listBackups(resolvedPath),
+  });
+
+  response.end();
+  return null;
+}
+
+const routes = new Map([
+  ["GET /api/health", handleHealth],
+  ["POST /api/session", handleSession],
+  ["GET /api/backups", handleBackups],
+  ["POST /api/analyze", handleAnalyze],
+  ["POST /api/analyze-path", handleAnalyzePath],
+  ["POST /api/backup", handleBackup],
+  ["POST /api/apply", handleApply],
+  ["POST /api/rollback", handleRollback],
+  ["POST /api/export", handleExport],
+  ["POST /api/analyze-stream", handleAnalyzeStream],
+  ["POST /api/analyze-path-stream", handleAnalyzePathStream],
+]);
+
 const server = http.createServer(async (request, response) => {
   try {
     const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    const routeKey = `${request.method} ${requestUrl.pathname}`;
+    const handler = routes.get(routeKey);
 
-    if (request.method === "GET" && requestUrl.pathname === "/api/health") {
-      sendJson(response, 200, {
-        ok: true,
-        port,
-        host,
-        mode: localFileAccessMode ? "local" : "remote",
-        localFileAccessMode,
-        defaultChromePaths: getDefaultChromePaths(),
-        detectedChromePaths: localFileAccessMode ? await detectChromeBookmarkFiles() : [],
-        backupStorePath: localFileAccessMode ? getBackupStorePath() : null,
-        sessionToken: localFileAccessMode ? sessionToken : null,
-      });
-      return;
-    }
-
-    if (request.method === "GET" && requestUrl.pathname === "/api/backups") {
-      if (!requireLocalFileAccess(response)) {
-        return;
+    if (handler) {
+      const result = await handler(request, response, requestUrl);
+      if (result !== null && !response.writableEnded) {
+        sendJson(response, 200, result);
       }
-      if (!requireSessionToken(request, response)) {
-        return;
-      }
-
-      const targetPath = requestUrl.searchParams.get("path");
-      if (!targetPath) {
-        sendJson(response, 400, { error: "path가 필요합니다." });
-        return;
-      }
-
-      sendJson(response, 200, {
-        resolvedPath: resolveInputPath(targetPath),
-        backups: await listBackups(targetPath),
-      });
-      return;
-    }
-
-    if (request.method === "POST" && requestUrl.pathname === "/api/analyze") {
-      const body = await readBody(request);
-      const rawText = body.rawText;
-      if (!rawText) {
-        sendJson(response, 400, { error: "rawText가 필요합니다." });
-        return;
-      }
-
-      const analysis = await analyzeBookmarks(rawText, body.options ?? {});
-      sendJson(response, 200, {
-        analysis,
-        analysisContext: {
-          kind: "upload",
-          sourceFingerprint: computeContentFingerprint(rawText),
-        },
-      });
-      return;
-    }
-
-    if (request.method === "POST" && requestUrl.pathname === "/api/analyze-path") {
-      if (!requireLocalFileAccess(response)) {
-        return;
-      }
-      if (!requireSessionToken(request, response)) {
-        return;
-      }
-
-      const body = await readBody(request);
-      if (!body.path) {
-        sendJson(response, 400, { error: "path가 필요합니다." });
-        return;
-      }
-
-      const { rawText, resolvedPath } = await readBookmarksFile(body.path);
-      const analysis = await analyzeBookmarks(rawText, body.options ?? {});
-      sendJson(response, 200, {
-        rawText,
-        resolvedPath,
-        analysis,
-        analysisContext: {
-          kind: "path",
-          resolvedPath,
-          sourceFingerprint: computeContentFingerprint(rawText),
-        },
-        backups: await listBackups(resolvedPath),
-      });
-      return;
-    }
-
-    if (request.method === "POST" && requestUrl.pathname === "/api/backup") {
-      if (!requireLocalFileAccess(response)) {
-        return;
-      }
-      if (!requireSessionToken(request, response)) {
-        return;
-      }
-
-      const body = await readBody(request);
-      if (!body.path) {
-        sendJson(response, 400, { error: "path가 필요합니다." });
-        return;
-      }
-
-      const { resolvedPath, rawText } = await readBookmarksFile(body.path);
-      const backup = await createCompressedBackup(resolvedPath, {
-        reason: body.reason ?? "manual",
-        rawText,
-      });
-
-      sendJson(response, 200, {
-        resolvedPath,
-        backup,
-        backups: await listBackups(resolvedPath),
-      });
-      return;
-    }
-
-    if (request.method === "POST" && requestUrl.pathname === "/api/apply") {
-      if (!requireLocalFileAccess(response)) {
-        return;
-      }
-      if (!requireSessionToken(request, response)) {
-        return;
-      }
-
-      const body = await readBody(request);
-      if (!body.path || !body.rawText || !body.analysis || !body.analysisContext) {
-        sendJson(response, 400, { error: "path, rawText, analysis, analysisContext가 필요합니다." });
-        return;
-      }
-
-      const { rawText: currentRawText, resolvedPath } = await readBookmarksFile(body.path);
-      const validationError = validateApplyAnalysisContext({
-        analysisContext: body.analysisContext,
-        requestedPath: body.path,
-        resolvedPath,
-        currentFingerprint: computeContentFingerprint(currentRawText),
-        sourceFingerprint: computeContentFingerprint(body.rawText),
-      });
-      if (validationError) {
-        sendJson(response, 409, { error: validationError });
-        return;
-      }
-
-      const backup = await createCompressedBackup(resolvedPath, {
-        reason: "pre-apply",
-        rawText: currentRawText,
-      });
-
-      const nextPayload = createChromeBookmarkPayload(body.rawText, body.analysis, body.options ?? {});
-      await writeBookmarksFile(resolvedPath, nextPayload.content);
-
-      const analysis = await analyzeBookmarks(nextPayload.content, body.analysisOptions ?? {});
-      sendJson(response, 200, {
-        resolvedPath,
-        rawText: nextPayload.content,
-        analysis,
-        analysisContext: {
-          kind: "path",
-          resolvedPath,
-          sourceFingerprint: computeContentFingerprint(nextPayload.content),
-        },
-        backup,
-        backups: await listBackups(resolvedPath),
-        exportedSize: nextPayload.exportedSize,
-      });
-      return;
-    }
-
-    if (request.method === "POST" && requestUrl.pathname === "/api/rollback") {
-      if (!requireLocalFileAccess(response)) {
-        return;
-      }
-      if (!requireSessionToken(request, response)) {
-        return;
-      }
-
-      const body = await readBody(request);
-      if (!body.path || !body.backupId) {
-        sendJson(response, 400, { error: "path와 backupId가 필요합니다." });
-        return;
-      }
-
-      const restored = await restoreBackup(body.path, body.backupId);
-      const analysis = await analyzeBookmarks(restored.rawText, body.analysisOptions ?? {});
-      sendJson(response, 200, {
-        resolvedPath: restored.resolvedPath,
-        rawText: restored.rawText,
-        analysis,
-        analysisContext: {
-          kind: "path",
-          resolvedPath: restored.resolvedPath,
-          sourceFingerprint: computeContentFingerprint(restored.rawText),
-        },
-        restoredBackup: restored.backup,
-        safetyBackup: restored.safetyBackup,
-        backups: await listBackups(restored.resolvedPath),
-      });
-      return;
-    }
-
-    if (request.method === "POST" && requestUrl.pathname === "/api/export") {
-      const body = await readBody(request);
-      if (!body.rawText || !body.analysis) {
-        sendJson(response, 400, { error: "rawText와 analysis가 필요합니다." });
-        return;
-      }
-
-      const payload = createExportPayload(body.rawText, body.analysis, body.options ?? {});
-      response.writeHead(200, {
-        "Content-Type": payload.contentType,
-        "Content-Disposition": `attachment; filename="bookmarks-organized.${payload.extension}"`,
-      });
-      response.end(payload.content);
       return;
     }
 
     await serveStatic(response, requestUrl.pathname);
   } catch (error) {
-    sendJson(response, 500, {
-      error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
-    });
+    if (!response.writableEnded) {
+      sendJson(response, 500, {
+        error: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
+      });
+    }
   }
 });
 

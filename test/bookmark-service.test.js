@@ -244,6 +244,104 @@ test("probeUrl treats rate limit and transient failures as suspect", async () =>
   }
 });
 
+test("analyzeBookmarks handles empty bookmark roots", async () => {
+  const rawText = JSON.stringify({
+    checksum: "empty",
+    roots: {
+      bookmark_bar: { type: "folder", children: [] },
+      other: { type: "folder", children: [] },
+      synced: { type: "folder", children: [] },
+    },
+  });
+
+  const analysis = await analyzeBookmarks(rawText, { linkCheckMode: "none" });
+
+  assert.equal(analysis.summary.totalBookmarks, 0);
+  assert.equal(analysis.summary.duplicateGroups, 0);
+  assert.equal(analysis.summary.deadLinks, 0);
+  assert.equal(analysis.duplicateGroups.length, 0);
+  assert.equal(analysis.items.length, 0);
+});
+
+test("analyzeBookmarks rejects invalid JSON without roots", async () => {
+  await assert.rejects(
+    () => analyzeBookmarks(JSON.stringify({ version: 1 }), { linkCheckMode: "none" }),
+    { message: /roots 객체가 필요합니다/ },
+  );
+});
+
+test("analyzeBookmarks skips non-http URLs as special", async () => {
+  const rawText = JSON.stringify({
+    checksum: "special",
+    roots: {
+      bookmark_bar: {
+        type: "folder",
+        children: [
+          { type: "url", id: "1", name: "Chrome Settings", url: "chrome://settings/", date_added: "0" },
+          { type: "url", id: "2", name: "JS Bookmark", url: "javascript:void(0)", date_added: "0" },
+          { type: "url", id: "3", name: "File", url: "file:///tmp/test.html", date_added: "0" },
+        ],
+      },
+      other: { type: "folder", children: [] },
+      synced: { type: "folder", children: [] },
+    },
+  });
+
+  const analysis = await analyzeBookmarks(rawText, { linkCheckMode: "full", concurrency: 1 });
+
+  assert.equal(analysis.summary.totalBookmarks, 3);
+  assert.equal(analysis.summary.specialLinks, 3);
+  assert.equal(analysis.summary.deadLinks, 0);
+});
+
+test("createExportPayload generates valid JSON format", async () => {
+  const analysis = await analyzeBookmarks(createSampleBookmarks("https://example.com"), {
+    linkCheckMode: "none",
+    linkStatusOverrides: {
+      "https://example.com/alive": { status: "alive", httpStatus: 200, detail: "fixture" },
+      "https://example.com/missing": { status: "dead", httpStatus: 404, detail: "fixture" },
+      "https://openai.com/docs": { status: "alive", httpStatus: 200, detail: "fixture" },
+    },
+  });
+
+  const payload = createExportPayload("", analysis, {
+    mode: "domain",
+    format: "json",
+    removeDeadLinks: true,
+    removeDuplicates: false,
+  });
+
+  assert.equal(payload.extension, "json");
+  assert.match(payload.contentType, /application\/json/);
+
+  const parsed = JSON.parse(payload.content);
+  assert.equal(parsed.mode, "domain");
+  assert.equal(parsed.removeDeadLinks, true);
+  assert.ok(parsed.exportedSize > 0);
+  assert.ok(Array.isArray(parsed.items));
+});
+
+test("onProgress callback fires during link check", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("ok", { status: 200 });
+
+  const progressEvents = [];
+  try {
+    await analyzeBookmarks(createSampleBookmarks("https://fixtures.example"), {
+      linkCheckMode: "full",
+      concurrency: 1,
+      timeoutMs: 1000,
+      onProgress: (event) => progressEvents.push(event),
+    });
+
+    assert.ok(progressEvents.length > 0);
+    const lastEvent = progressEvents[progressEvents.length - 1];
+    assert.equal(lastEvent.checked, lastEvent.total);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("createChromeBookmarkPayload preserves original folder structure in original mode", async () => {
   const rawText = createOriginalStructureBookmarks("https://example.com");
   const analysis = await analyzeBookmarks(rawText, {
