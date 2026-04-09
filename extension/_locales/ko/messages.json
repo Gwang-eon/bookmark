@@ -1,11 +1,10 @@
 {
   "extName": {
-    "message": "Chrome Bookmark Organizer"
+    "message": "즐겨찾기 정리 도구"
   },
   "extDescription": {
-    "message": "크롬 즐겨찾기 정리 도구 — 죽은 링크, 중복, 주제/도메인 분류, 중요도 분석"
+    "message": "브라우저 즐겨찾기 정리 도구 — 죽은 링크, 중복, 주제/도메인 분류, 중요도 분석"
   },
-
   "root_bookmark_bar": {
     "message": "북마크바"
   },
@@ -15,7 +14,6 @@
   "root_synced": {
     "message": "동기화 북마크"
   },
-
   "topic_development": {
     "message": "개발"
   },
@@ -52,7 +50,6 @@
   "topic_other": {
     "message": "기타"
   },
-
   "pattern_development": {
     "message": "개발|프로그래밍|코드|문서|레포"
   },
@@ -86,18 +83,15 @@
   "pattern_travel": {
     "message": "여행|지도|항공|호텔|예약"
   },
-
   "pattern_folder_priority": {
     "message": "읽기|업무|중요|자주|참고|도구"
   },
-
   "domain_other": {
     "message": "기타"
   },
   "path_root": {
     "message": "(루트)"
   },
-
   "bucket_high": {
     "message": "높음"
   },
@@ -107,7 +101,6 @@
   "bucket_low": {
     "message": "낮음"
   },
-
   "link_detail_non_http": {
     "message": "http/https 이외 스킴"
   },
@@ -123,7 +116,6 @@
   "link_detail_unchecked": {
     "message": "미검사"
   },
-
   "error_invalid_json": {
     "message": "크롬 북마크 JSON 형식이 아닙니다. roots 객체가 필요합니다."
   },
@@ -133,35 +125,41 @@
   "error_backup_integrity": {
     "message": "백업 데이터 무결성 검증 실패. 복원을 중단합니다."
   },
-
   "suggestion_dead_links": {
     "message": "죽은 링크 $1개를 먼저 제거하면 정리 난이도가 가장 크게 낮아진다.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_duplicates": {
     "message": "중복 그룹 $1개에서 대표 북마크만 남기면 북마크 수가 빠르게 줄어든다.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_top_topic": {
     "message": "가장 큰 주제는 \"$1\"이므로 전용 폴더를 따로 두는 편이 관리가 쉽다.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_top_domain": {
     "message": "\"$1\" 도메인 북마크가 가장 많으므로 도메인 기준 정리 효과가 크다.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_none": {
     "message": "바로 제거할 항목이 많지 않다. 폴더 정책을 먼저 정하면 된다."
   },
-
   "summary_total": {
     "message": "전체 북마크"
   },
@@ -186,7 +184,6 @@
   "summary_alive": {
     "message": "살아 있는 링크"
   },
-
   "col_domain": {
     "message": "도메인"
   },
@@ -232,7 +229,6 @@
   "col_rollback": {
     "message": "롤백"
   },
-
   "table_empty": {
     "message": "표시할 항목이 없다."
   },
@@ -245,38 +241,56 @@
   "truncation_notice": {
     "message": "외 $1건이 더 있습니다. (총 $2건 중 $3건 표시)",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" },
-      "3": { "content": "$3" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      },
+      "3": {
+        "content": "$3"
+      }
     }
   },
   "duplicate_info": {
     "message": "중복 $1개, 대표 유지: $2 / $3",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" },
-      "3": { "content": "$3" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      },
+      "3": {
+        "content": "$3"
+      }
     }
   },
-
   "selection_with_exclusion": {
     "message": "$1개 포함 / $2개 제외 (전체 $3개)",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" },
-      "3": { "content": "$3" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      },
+      "3": {
+        "content": "$3"
+      }
     }
   },
   "selection_all_included": {
     "message": "전체 $1개 포함",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "select_all_title": {
     "message": "현재 표시된 항목 전체 선택/해제"
   },
-
   "btn_rollback": {
     "message": "이 백업으로 복원"
   },
@@ -301,7 +315,6 @@
   "btn_exclude_all": {
     "message": "전체 제외"
   },
-
   "status_waiting": {
     "message": "대기 중"
   },
@@ -311,14 +324,20 @@
   "status_link_checking": {
     "message": "링크 검사 중: $1 / $2",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      }
     }
   },
   "status_analysis_complete": {
     "message": "분석 완료: 북마크 $1개",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "status_analyze_first": {
@@ -357,19 +376,17 @@
   "status_rollback_complete": {
     "message": "롤백 완료."
   },
-
   "confirm_apply": {
     "message": "정리본을 브라우저 북마크에 직접 적용합니다.\n현재 북마크는 자동 백업됩니다. 계속하시겠습니까?"
   },
   "confirm_rollback": {
     "message": "선택한 백업으로 롤백합니다. 현재 북마크는 자동 백업됩니다. 계속하시겠습니까?"
   },
-
   "html_eyebrow": {
     "message": "CHROME EXTENSION"
   },
   "html_title": {
-    "message": "크롬 즐겨찾기 정리 도구"
+    "message": "즐겨찾기 정리 도구"
   },
   "html_subtitle": {
     "message": "브라우저의 북마크를 직접 읽어서 죽은 링크, 중복 링크, 주제/도메인 분류, 중요도 점수를 한 번에 분석한다."
@@ -518,7 +535,6 @@
   "html_apply_hint": {
     "message": "안전하게 적용하려면 Chrome을 다시 시작하여 변경 사항을 확인하는 편이 낫다."
   },
-
   "popup_btn_open": {
     "message": "즐겨찾기 정리 도구 열기"
   },

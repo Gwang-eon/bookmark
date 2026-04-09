@@ -1,11 +1,10 @@
 {
   "extName": {
-    "message": "Chrome Bookmark Organizer"
+    "message": "Bookmark Organizer"
   },
   "extDescription": {
-    "message": "Chrome bookmark organizer — dead links, duplicates, topic/domain classification, importance analysis"
+    "message": "Browser bookmark organizer — dead links, duplicates, topic/domain classification, importance analysis"
   },
-
   "root_bookmark_bar": {
     "message": "Bookmarks Bar"
   },
@@ -15,7 +14,6 @@
   "root_synced": {
     "message": "Synced Bookmarks"
   },
-
   "topic_development": {
     "message": "Development"
   },
@@ -52,7 +50,6 @@
   "topic_other": {
     "message": "Other"
   },
-
   "pattern_development": {
     "message": "development|programming|code|docs|repo"
   },
@@ -86,18 +83,15 @@
   "pattern_travel": {
     "message": "travel|map|flight|hotel|booking"
   },
-
   "pattern_folder_priority": {
     "message": "reading|work|important|frequent|reference|tools"
   },
-
   "domain_other": {
     "message": "Other"
   },
   "path_root": {
     "message": "(root)"
   },
-
   "bucket_high": {
     "message": "High"
   },
@@ -107,7 +101,6 @@
   "bucket_low": {
     "message": "Low"
   },
-
   "link_detail_non_http": {
     "message": "Non-http/https scheme"
   },
@@ -123,7 +116,6 @@
   "link_detail_unchecked": {
     "message": "Unchecked"
   },
-
   "error_invalid_json": {
     "message": "Not a valid Chrome bookmark JSON format. A roots object is required."
   },
@@ -133,35 +125,41 @@
   "error_backup_integrity": {
     "message": "Backup data integrity check failed. Aborting restore."
   },
-
   "suggestion_dead_links": {
     "message": "Removing $1 dead links first will reduce cleanup difficulty the most.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_duplicates": {
     "message": "Keeping only the representative bookmark from $1 duplicate groups will quickly reduce the bookmark count.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_top_topic": {
     "message": "The largest topic is \"$1\", so creating a dedicated folder makes management easier.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_top_domain": {
     "message": "\"$1\" has the most bookmarks, so organizing by domain will be most effective.",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "suggestion_none": {
     "message": "There are not many items to remove right away. Define a folder policy first."
   },
-
   "summary_total": {
     "message": "Total Bookmarks"
   },
@@ -186,7 +184,6 @@
   "summary_alive": {
     "message": "Live Links"
   },
-
   "col_domain": {
     "message": "Domain"
   },
@@ -232,7 +229,6 @@
   "col_rollback": {
     "message": "Rollback"
   },
-
   "table_empty": {
     "message": "No items to display."
   },
@@ -245,38 +241,56 @@
   "truncation_notice": {
     "message": "$1 more items. (showing $3 of $2 total)",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" },
-      "3": { "content": "$3" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      },
+      "3": {
+        "content": "$3"
+      }
     }
   },
   "duplicate_info": {
     "message": "$1 duplicates, keep representative: $2 / $3",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" },
-      "3": { "content": "$3" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      },
+      "3": {
+        "content": "$3"
+      }
     }
   },
-
   "selection_with_exclusion": {
     "message": "$1 included / $2 excluded (total $3)",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" },
-      "3": { "content": "$3" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      },
+      "3": {
+        "content": "$3"
+      }
     }
   },
   "selection_all_included": {
     "message": "All $1 included",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "select_all_title": {
     "message": "Select/deselect all currently displayed items"
   },
-
   "btn_rollback": {
     "message": "Restore this backup"
   },
@@ -301,7 +315,6 @@
   "btn_exclude_all": {
     "message": "Exclude All"
   },
-
   "status_waiting": {
     "message": "Waiting"
   },
@@ -311,14 +324,20 @@
   "status_link_checking": {
     "message": "Checking links: $1 / $2",
     "placeholders": {
-      "1": { "content": "$1" },
-      "2": { "content": "$2" }
+      "1": {
+        "content": "$1"
+      },
+      "2": {
+        "content": "$2"
+      }
     }
   },
   "status_analysis_complete": {
     "message": "Analysis complete: $1 bookmarks",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "status_analyze_first": {
@@ -357,19 +376,17 @@
   "status_rollback_complete": {
     "message": "Rollback complete."
   },
-
   "confirm_apply": {
     "message": "Apply the organized bookmarks directly to the browser.\nCurrent bookmarks will be backed up automatically. Continue?"
   },
   "confirm_rollback": {
     "message": "Roll back to the selected backup. Current bookmarks will be backed up automatically. Continue?"
   },
-
   "html_eyebrow": {
     "message": "CHROME EXTENSION"
   },
   "html_title": {
-    "message": "Chrome Bookmark Organizer"
+    "message": "Bookmark Organizer"
   },
   "html_subtitle": {
     "message": "Reads your browser bookmarks directly and analyzes dead links, duplicates, topic/domain classification, and importance scores all at once."
@@ -518,7 +535,6 @@
   "html_apply_hint": {
     "message": "For a safe apply, it is better to restart Chrome to verify the changes."
   },
-
   "popup_btn_open": {
     "message": "Open Bookmark Organizer"
   },
