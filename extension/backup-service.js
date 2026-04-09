@@ -1,4 +1,5 @@
 import { computeContentFingerprint } from "./crypto-utils.js";
+import { msg } from "./i18n.js";
 
 const BACKUP_KEY = "bookmark_backups_index";
 const BACKUP_DATA_PREFIX = "backup_data_";
@@ -47,7 +48,7 @@ export async function restoreBackup(backupId) {
   const snapshot = result[key];
 
   if (!snapshot) {
-    throw new Error("백업을 찾을 수 없습니다.");
+    throw new Error(msg("error_backup_not_found"));
   }
 
   const { [BACKUP_KEY]: index = [] } = await chrome.storage.local.get(BACKUP_KEY);
@@ -55,7 +56,7 @@ export async function restoreBackup(backupId) {
   if (backupEntry?.checksum) {
     const currentChecksum = await computeContentFingerprint(snapshot);
     if (currentChecksum !== backupEntry.checksum) {
-      throw new Error("백업 데이터 무결성 검증 실패. 복원을 중단합니다.");
+      throw new Error(msg("error_backup_integrity"));
     }
   }
 

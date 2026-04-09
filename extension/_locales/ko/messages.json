@@ -1,0 +1,528 @@
+{
+  "extName": {
+    "message": "Chrome Bookmark Organizer"
+  },
+  "extDescription": {
+    "message": "크롬 즐겨찾기 정리 도구 — 죽은 링크, 중복, 주제/도메인 분류, 중요도 분석"
+  },
+
+  "root_bookmark_bar": {
+    "message": "북마크바"
+  },
+  "root_other": {
+    "message": "기타 북마크"
+  },
+  "root_synced": {
+    "message": "동기화 북마크"
+  },
+
+  "topic_development": {
+    "message": "개발"
+  },
+  "topic_ai_data": {
+    "message": "AI·데이터"
+  },
+  "topic_productivity": {
+    "message": "생산성"
+  },
+  "topic_design": {
+    "message": "디자인"
+  },
+  "topic_news": {
+    "message": "뉴스·읽을거리"
+  },
+  "topic_shopping": {
+    "message": "쇼핑"
+  },
+  "topic_finance": {
+    "message": "금융"
+  },
+  "topic_media": {
+    "message": "영상·미디어"
+  },
+  "topic_social": {
+    "message": "소셜·커뮤니티"
+  },
+  "topic_education": {
+    "message": "학습·레퍼런스"
+  },
+  "topic_travel": {
+    "message": "여행·지도"
+  },
+  "topic_other": {
+    "message": "기타"
+  },
+
+  "pattern_development": {
+    "message": "개발|프로그래밍|코드|문서|레포"
+  },
+  "pattern_ai_data": {
+    "message": "인공지능|데이터|모델|프롬프트"
+  },
+  "pattern_productivity": {
+    "message": "업무|일정|노트|회의|문서"
+  },
+  "pattern_design": {
+    "message": "디자인|색상|폰트|아이콘|레이아웃"
+  },
+  "pattern_news": {
+    "message": "뉴스|블로그|기사|읽기"
+  },
+  "pattern_shopping": {
+    "message": "쇼핑|구매|마켓|스토어"
+  },
+  "pattern_finance": {
+    "message": "금융|투자|주식|세금|결제"
+  },
+  "pattern_media": {
+    "message": "영상|음악|영화|스트리밍|채널"
+  },
+  "pattern_social": {
+    "message": "커뮤니티|포럼|소셜|채팅|토론"
+  },
+  "pattern_education": {
+    "message": "학습|강의|튜토리얼|가이드|레퍼런스|위키"
+  },
+  "pattern_travel": {
+    "message": "여행|지도|항공|호텔|예약"
+  },
+
+  "pattern_folder_priority": {
+    "message": "읽기|업무|중요|자주|참고|도구"
+  },
+
+  "domain_other": {
+    "message": "기타"
+  },
+  "path_root": {
+    "message": "(루트)"
+  },
+
+  "bucket_high": {
+    "message": "높음"
+  },
+  "bucket_medium": {
+    "message": "중간"
+  },
+  "bucket_low": {
+    "message": "낮음"
+  },
+
+  "link_detail_non_http": {
+    "message": "http/https 이외 스킴"
+  },
+  "link_detail_restricted": {
+    "message": "접근 제한"
+  },
+  "link_detail_request_failed": {
+    "message": "요청 실패"
+  },
+  "link_detail_no_response": {
+    "message": "응답 없음"
+  },
+  "link_detail_unchecked": {
+    "message": "미검사"
+  },
+
+  "error_invalid_json": {
+    "message": "크롬 북마크 JSON 형식이 아닙니다. roots 객체가 필요합니다."
+  },
+  "error_backup_not_found": {
+    "message": "백업을 찾을 수 없습니다."
+  },
+  "error_backup_integrity": {
+    "message": "백업 데이터 무결성 검증 실패. 복원을 중단합니다."
+  },
+
+  "suggestion_dead_links": {
+    "message": "죽은 링크 $1개를 먼저 제거하면 정리 난이도가 가장 크게 낮아진다.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_duplicates": {
+    "message": "중복 그룹 $1개에서 대표 북마크만 남기면 북마크 수가 빠르게 줄어든다.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_top_topic": {
+    "message": "가장 큰 주제는 \"$1\"이므로 전용 폴더를 따로 두는 편이 관리가 쉽다.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_top_domain": {
+    "message": "\"$1\" 도메인 북마크가 가장 많으므로 도메인 기준 정리 효과가 크다.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_none": {
+    "message": "바로 제거할 항목이 많지 않다. 폴더 정책을 먼저 정하면 된다."
+  },
+
+  "summary_total": {
+    "message": "전체 북마크"
+  },
+  "summary_duplicates": {
+    "message": "중복 제거 가능 수"
+  },
+  "summary_dead": {
+    "message": "죽은 링크"
+  },
+  "summary_suspect": {
+    "message": "의심 링크"
+  },
+  "summary_unique": {
+    "message": "고유 URL"
+  },
+  "summary_domains": {
+    "message": "도메인 수"
+  },
+  "summary_topics": {
+    "message": "주제 수"
+  },
+  "summary_alive": {
+    "message": "살아 있는 링크"
+  },
+
+  "col_domain": {
+    "message": "도메인"
+  },
+  "col_bookmark_count": {
+    "message": "북마크 수"
+  },
+  "col_dead_links": {
+    "message": "죽은 링크"
+  },
+  "col_high_importance": {
+    "message": "높은 중요도"
+  },
+  "col_topic": {
+    "message": "주제"
+  },
+  "col_status": {
+    "message": "상태"
+  },
+  "col_title": {
+    "message": "제목"
+  },
+  "col_url": {
+    "message": "URL"
+  },
+  "col_folder": {
+    "message": "폴더"
+  },
+  "col_response": {
+    "message": "응답"
+  },
+  "col_importance": {
+    "message": "중요도"
+  },
+  "col_created": {
+    "message": "생성 시각"
+  },
+  "col_reason": {
+    "message": "사유"
+  },
+  "col_size": {
+    "message": "크기"
+  },
+  "col_rollback": {
+    "message": "롤백"
+  },
+
+  "table_empty": {
+    "message": "표시할 항목이 없다."
+  },
+  "no_duplicate_groups": {
+    "message": "중복 그룹이 없다."
+  },
+  "no_backups": {
+    "message": "저장된 백업이 없다."
+  },
+  "truncation_notice": {
+    "message": "외 $1건이 더 있습니다. (총 $2건 중 $3건 표시)",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+  "duplicate_info": {
+    "message": "중복 $1개, 대표 유지: $2 / $3",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+
+  "selection_with_exclusion": {
+    "message": "$1개 포함 / $2개 제외 (전체 $3개)",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+  "selection_all_included": {
+    "message": "전체 $1개 포함",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "select_all_title": {
+    "message": "현재 표시된 항목 전체 선택/해제"
+  },
+
+  "btn_rollback": {
+    "message": "이 백업으로 복원"
+  },
+  "btn_analyze": {
+    "message": "북마크 분석"
+  },
+  "btn_download": {
+    "message": "정리본 다운로드"
+  },
+  "btn_backup": {
+    "message": "현재 북마크 백업"
+  },
+  "btn_apply": {
+    "message": "정리본 적용"
+  },
+  "btn_refresh_backups": {
+    "message": "백업 목록 새로고침"
+  },
+  "btn_include_all": {
+    "message": "전체 포함"
+  },
+  "btn_exclude_all": {
+    "message": "전체 제외"
+  },
+
+  "status_waiting": {
+    "message": "대기 중"
+  },
+  "status_analyzing": {
+    "message": "브라우저 북마크를 읽고 분석 중이다."
+  },
+  "status_link_checking": {
+    "message": "링크 검사 중: $1 / $2",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" }
+    }
+  },
+  "status_analysis_complete": {
+    "message": "분석 완료: 북마크 $1개",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "status_analyze_first": {
+    "message": "먼저 북마크를 분석해야 한다."
+  },
+  "status_generating_file": {
+    "message": "정리된 파일을 생성 중이다."
+  },
+  "status_download_started": {
+    "message": "다운로드를 시작했다."
+  },
+  "status_operation_in_progress": {
+    "message": "다른 작업이 진행 중입니다."
+  },
+  "status_backing_up": {
+    "message": "현재 북마크를 백업 중이다."
+  },
+  "status_backup_created": {
+    "message": "백업을 생성했다."
+  },
+  "status_need_analysis": {
+    "message": "먼저 분석 결과가 있어야 한다."
+  },
+  "status_applying": {
+    "message": "현재 북마크를 백업한 뒤 정리본을 적용 중이다."
+  },
+  "status_apply_complete": {
+    "message": "적용 완료."
+  },
+  "status_backups_refreshed": {
+    "message": "백업 목록을 새로 읽었다."
+  },
+  "status_rolling_back": {
+    "message": "선택한 백업으로 롤백 중이다."
+  },
+  "status_rollback_complete": {
+    "message": "롤백 완료."
+  },
+
+  "confirm_apply": {
+    "message": "정리본을 브라우저 북마크에 직접 적용합니다.\n현재 북마크는 자동 백업됩니다. 계속하시겠습니까?"
+  },
+  "confirm_rollback": {
+    "message": "선택한 백업으로 롤백합니다. 현재 북마크는 자동 백업됩니다. 계속하시겠습니까?"
+  },
+
+  "html_eyebrow": {
+    "message": "CHROME EXTENSION"
+  },
+  "html_title": {
+    "message": "크롬 즐겨찾기 정리 도구"
+  },
+  "html_subtitle": {
+    "message": "브라우저의 북마크를 직접 읽어서 죽은 링크, 중복 링크, 주제/도메인 분류, 중요도 점수를 한 번에 분석한다."
+  },
+  "html_criteria_title": {
+    "message": "정리 기준"
+  },
+  "html_criteria_dead": {
+    "message": "죽은 링크"
+  },
+  "html_criteria_dup": {
+    "message": "중복 링크"
+  },
+  "html_criteria_topic": {
+    "message": "주제별"
+  },
+  "html_criteria_domain": {
+    "message": "도메인별"
+  },
+  "html_criteria_importance": {
+    "message": "중요도순"
+  },
+  "html_section_analysis": {
+    "message": "분석"
+  },
+  "html_section_analysis_desc": {
+    "message": "브라우저의 북마크를 직접 읽어서 분석한다."
+  },
+  "html_link_check_label": {
+    "message": "죽은 링크 검사"
+  },
+  "html_option_quick": {
+    "message": "빠르게 검사 (상위 200개 URL)"
+  },
+  "html_option_full": {
+    "message": "전체 검사"
+  },
+  "html_option_skip": {
+    "message": "건너뛰기"
+  },
+  "html_timeout_label": {
+    "message": "타임아웃(ms)"
+  },
+  "html_section_summary": {
+    "message": "요약"
+  },
+  "html_section_summary_desc": {
+    "message": "현재 북마크 상태를 빠르게 볼 수 있는 핵심 지표다."
+  },
+  "html_section_suggestions": {
+    "message": "추천 조치"
+  },
+  "html_section_suggestions_desc": {
+    "message": "효과가 큰 정리 순서를 자동으로 제안한다."
+  },
+  "html_section_top_domains": {
+    "message": "상위 도메인"
+  },
+  "html_section_top_domains_desc": {
+    "message": "같은 도메인에 북마크가 몰린 곳부터 정리할 수 있다."
+  },
+  "html_section_topic_class": {
+    "message": "주제 분류"
+  },
+  "html_section_topic_class_desc": {
+    "message": "규칙 기반 분류라서 필요하면 분류 규칙을 확장하면 된다."
+  },
+  "html_section_dead_links": {
+    "message": "죽은 링크"
+  },
+  "html_section_dead_links_desc": {
+    "message": "시간 초과나 5xx는 의심 링크로 함께 표시한다."
+  },
+  "html_section_dup_groups": {
+    "message": "중복 그룹"
+  },
+  "html_section_dup_groups_desc": {
+    "message": "가장 중요도 점수가 높은 북마크를 대표로 남긴다."
+  },
+  "html_section_all_bookmarks": {
+    "message": "전체 북마크"
+  },
+  "html_section_all_bookmarks_desc": {
+    "message": "검색, 정렬, 상태 확인용 목록이다."
+  },
+  "html_search_placeholder": {
+    "message": "제목, URL, 도메인, 폴더 검색"
+  },
+  "html_sort_importance": {
+    "message": "중요도순"
+  },
+  "html_sort_domain": {
+    "message": "도메인순"
+  },
+  "html_sort_topic": {
+    "message": "주제순"
+  },
+  "html_sort_title": {
+    "message": "제목순"
+  },
+  "html_section_export": {
+    "message": "내보내기"
+  },
+  "html_section_export_desc": {
+    "message": "죽은 링크와 중복을 제거한 뒤 HTML 또는 JSON으로 내려받을 수 있다."
+  },
+  "html_export_mode_label": {
+    "message": "정리 방식"
+  },
+  "html_export_original": {
+    "message": "원래 폴더 구조 유지"
+  },
+  "html_export_topic": {
+    "message": "주제별 폴더"
+  },
+  "html_export_domain": {
+    "message": "도메인별 폴더"
+  },
+  "html_export_importance": {
+    "message": "중요도 버킷"
+  },
+  "html_format_label": {
+    "message": "형식"
+  },
+  "html_format_html": {
+    "message": "HTML (Chrome 가져오기용)"
+  },
+  "html_format_json": {
+    "message": "JSON (리포트용)"
+  },
+  "html_exclude_dead": {
+    "message": "죽은 링크 제외"
+  },
+  "html_exclude_suspect": {
+    "message": "의심 링크 제외"
+  },
+  "html_exclude_dup": {
+    "message": "중복 링크 제외"
+  },
+  "html_section_apply": {
+    "message": "직접 적용 / 롤백"
+  },
+  "html_section_apply_desc": {
+    "message": "적용 전 자동으로 백업된다."
+  },
+  "html_apply_hint": {
+    "message": "안전하게 적용하려면 Chrome을 다시 시작하여 변경 사항을 확인하는 편이 낫다."
+  },
+
+  "popup_btn_open": {
+    "message": "즐겨찾기 정리 도구 열기"
+  },
+  "popup_hint": {
+    "message": "새 탭에서 열립니다"
+  }
+}

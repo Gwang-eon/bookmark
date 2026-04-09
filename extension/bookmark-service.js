@@ -1,8 +1,12 @@
-const ROOT_LABELS = {
-  bookmark_bar: "북마크바",
-  other: "기타 북마크",
-  synced: "동기화 북마크",
-};
+import { msg, getLocale, getBucketDisplayName } from "./i18n.js";
+
+function getRootLabels() {
+  return {
+    bookmark_bar: msg("root_bookmark_bar"),
+    other: msg("root_other"),
+    synced: msg("root_synced"),
+  };
+}
 
 const TRACKING_PARAMS = new Set([
   "fbclid",
@@ -24,104 +28,120 @@ const TRACKING_PARAMS = new Set([
   "utm_term",
 ]);
 
-const FOLDER_PRIORITY_RE = /(important|favorite|favourite|daily|work|docs|reference|tool|quick|읽기|업무|중요|자주|참고|도구)/i;
+let _folderPriorityReCache = null;
+function getFolderPriorityRe() {
+  if (_folderPriorityReCache) return _folderPriorityReCache;
+  const localPatterns = msg("pattern_folder_priority");
+  _folderPriorityReCache = new RegExp(`(important|favorite|favourite|daily|work|docs|reference|tool|quick|${localPatterns})`, "i");
+  return _folderPriorityReCache;
+}
 
-const TOPIC_RULES = [
-  {
-    topic: "개발",
-    weight: 16,
-    domains: [
-      "github.com",
-      "gitlab.com",
-      "stackoverflow.com",
-      "developer.mozilla.org",
-      "nodejs.org",
-      "npmjs.com",
-      "vercel.com",
-      "cloudflare.com",
-    ],
-    patterns: [
-      /\b(api|sdk|dev|developer|programming|code|coding|javascript|typescript|react|vue|node|python|java|rust|docker|kubernetes|sql|database|repo)\b/i,
-      /(개발|프로그래밍|코드|문서|레포)/i,
-    ],
-  },
-  {
-    topic: "AI·데이터",
-    weight: 16,
-    domains: [
-      "openai.com",
-      "huggingface.co",
-      "kaggle.com",
-      "colab.research.google.com",
-      "arxiv.org",
-      "paperswithcode.com",
-    ],
-    patterns: [/\b(ai|llm|gpt|machine learning|data science|neural|prompt|model|dataset)\b/i, /(인공지능|데이터|모델|프롬프트)/i],
-  },
-  {
-    topic: "생산성",
-    weight: 14,
-    domains: [
-      "notion.so",
-      "docs.google.com",
-      "drive.google.com",
-      "calendar.google.com",
-      "slack.com",
-      "zoom.us",
-      "trello.com",
-      "atlassian.net",
-    ],
-    patterns: [/\b(doc|docs|calendar|workspace|board|task|meeting|project|note|productivity)\b/i, /(업무|일정|노트|회의|문서)/i],
-  },
-  {
-    topic: "디자인",
-    weight: 14,
-    domains: ["figma.com", "dribbble.com", "behance.net", "adobe.com", "coolors.co"],
-    patterns: [/\b(design|ui|ux|font|icon|color|palette|mockup|layout)\b/i, /(디자인|색상|폰트|아이콘|레이아웃)/i],
-  },
-  {
-    topic: "뉴스·읽을거리",
-    weight: 12,
-    domains: ["medium.com", "substack.com", "news.ycombinator.com", "nytimes.com", "bbc.com"],
-    patterns: [/\b(news|blog|article|post|magazine|journal|story)\b/i, /(뉴스|블로그|기사|읽기)/i],
-  },
-  {
-    topic: "쇼핑",
-    weight: 12,
-    domains: ["amazon.com", "coupang.com", "aliexpress.com", "11st.co.kr", "gmarket.co.kr"],
-    patterns: [/\b(shop|shopping|store|market|deal|cart|mall)\b/i, /(쇼핑|구매|마켓|스토어)/i],
-  },
-  {
-    topic: "금융",
-    weight: 12,
-    domains: ["paypal.com", "stripe.com", "wise.com", "investing.com", "tradingview.com"],
-    patterns: [/\b(finance|stock|bank|invest|crypto|payment|tax|accounting)\b/i, /(금융|투자|주식|세금|결제)/i],
-  },
-  {
-    topic: "영상·미디어",
-    weight: 12,
-    domains: ["youtube.com", "netflix.com", "twitch.tv", "vimeo.com", "spotify.com"],
-    patterns: [/\b(video|stream|music|movie|watch|channel|podcast)\b/i, /(영상|음악|영화|스트리밍|채널)/i],
-  },
-  {
-    topic: "소셜·커뮤니티",
-    weight: 12,
-    domains: ["x.com", "twitter.com", "linkedin.com", "facebook.com", "reddit.com", "discord.com"],
-    patterns: [/\b(community|forum|social|chat|thread|discussion|network)\b/i, /(커뮤니티|포럼|소셜|채팅|토론)/i],
-  },
-  {
-    topic: "학습·레퍼런스",
-    weight: 12,
-    domains: ["wikipedia.org", "coursera.org", "udemy.com", "edx.org", "khanacademy.org"],
-    patterns: [/\b(learn|course|tutorial|guide|reference|manual|wiki|lesson)\b/i, /(학습|강의|튜토리얼|가이드|레퍼런스|위키)/i],
-  },
-  {
-    topic: "여행·지도",
-    weight: 12,
-    domains: ["maps.google.com", "airbnb.com", "booking.com", "tripadvisor.com", "skyscanner.com"],
-    patterns: [/\b(travel|flight|hotel|map|route|trip|booking)\b/i, /(여행|지도|항공|호텔|예약)/i],
-  },
-];
+let _topicRulesCache = null;
+function getTopicRules() {
+  if (_topicRulesCache) return _topicRulesCache;
+  _topicRulesCache = [
+    {
+      topic: msg("topic_development"),
+      weight: 16,
+      domains: ["github.com", "gitlab.com", "stackoverflow.com", "developer.mozilla.org", "nodejs.org", "npmjs.com", "vercel.com", "cloudflare.com"],
+      patterns: [
+        /\b(api|sdk|dev|developer|programming|code|coding|javascript|typescript|react|vue|node|python|java|rust|docker|kubernetes|sql|database|repo)\b/i,
+        new RegExp(msg("pattern_development"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_ai_data"),
+      weight: 16,
+      domains: ["openai.com", "huggingface.co", "kaggle.com", "colab.research.google.com", "arxiv.org", "paperswithcode.com"],
+      patterns: [
+        /\b(ai|llm|gpt|machine learning|data science|neural|prompt|model|dataset)\b/i,
+        new RegExp(msg("pattern_ai_data"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_productivity"),
+      weight: 14,
+      domains: ["notion.so", "docs.google.com", "drive.google.com", "calendar.google.com", "slack.com", "zoom.us", "trello.com", "atlassian.net"],
+      patterns: [
+        /\b(doc|docs|calendar|workspace|board|task|meeting|project|note|productivity)\b/i,
+        new RegExp(msg("pattern_productivity"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_design"),
+      weight: 14,
+      domains: ["figma.com", "dribbble.com", "behance.net", "adobe.com", "coolors.co"],
+      patterns: [
+        /\b(design|ui|ux|font|icon|color|palette|mockup|layout)\b/i,
+        new RegExp(msg("pattern_design"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_news"),
+      weight: 12,
+      domains: ["medium.com", "substack.com", "news.ycombinator.com", "nytimes.com", "bbc.com"],
+      patterns: [
+        /\b(news|blog|article|post|magazine|journal|story)\b/i,
+        new RegExp(msg("pattern_news"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_shopping"),
+      weight: 12,
+      domains: ["amazon.com", "coupang.com", "aliexpress.com", "11st.co.kr", "gmarket.co.kr"],
+      patterns: [
+        /\b(shop|shopping|store|market|deal|cart|mall)\b/i,
+        new RegExp(msg("pattern_shopping"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_finance"),
+      weight: 12,
+      domains: ["paypal.com", "stripe.com", "wise.com", "investing.com", "tradingview.com"],
+      patterns: [
+        /\b(finance|stock|bank|invest|crypto|payment|tax|accounting)\b/i,
+        new RegExp(msg("pattern_finance"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_media"),
+      weight: 12,
+      domains: ["youtube.com", "netflix.com", "twitch.tv", "vimeo.com", "spotify.com"],
+      patterns: [
+        /\b(video|stream|music|movie|watch|channel|podcast)\b/i,
+        new RegExp(msg("pattern_media"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_social"),
+      weight: 12,
+      domains: ["x.com", "twitter.com", "linkedin.com", "facebook.com", "reddit.com", "discord.com"],
+      patterns: [
+        /\b(community|forum|social|chat|thread|discussion|network)\b/i,
+        new RegExp(msg("pattern_social"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_learning"),
+      weight: 12,
+      domains: ["wikipedia.org", "coursera.org", "udemy.com", "edx.org", "khanacademy.org"],
+      patterns: [
+        /\b(learn|course|tutorial|guide|reference|manual|wiki|lesson)\b/i,
+        new RegExp(msg("pattern_learning"), "i"),
+      ],
+    },
+    {
+      topic: msg("topic_travel"),
+      weight: 12,
+      domains: ["maps.google.com", "airbnb.com", "booking.com", "tripadvisor.com", "skyscanner.com"],
+      patterns: [
+        /\b(travel|flight|hotel|map|route|trip|booking)\b/i,
+        new RegExp(msg("pattern_travel"), "i"),
+      ],
+    },
+  ];
+  return _topicRulesCache;
+}
 
 function chromeTimeToUnixMs(chromeTime) {
   if (!chromeTime) {
@@ -200,7 +220,7 @@ function getHostname(rawUrl) {
 
 function cleanDomain(hostname) {
   if (!hostname) {
-    return "기타";
+    return msg("domain_other");
   }
 
   return hostname.replace(/^www\./, "");
@@ -221,10 +241,10 @@ function classifyTopic({ title, url, hostname, folderPath }) {
     .join(" ")
     .toLowerCase();
 
-  let bestTopic = "기타";
+  let bestTopic = msg("topic_other");
   let bestScore = -1;
 
-  for (const rule of TOPIC_RULES) {
+  for (const rule of getTopicRules()) {
     let score = 0;
 
     if (rule.domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) {
@@ -243,7 +263,7 @@ function classifyTopic({ title, url, hostname, folderPath }) {
     }
   }
 
-  return bestScore <= 0 ? "기타" : bestTopic;
+  return bestScore <= 0 ? msg("topic_other") : bestTopic;
 }
 
 function summarizeBy(items, keySelector) {
@@ -266,14 +286,14 @@ function summarizeBy(items, keySelector) {
     if (item.linkStatus === "suspect") {
       current.suspectCount += 1;
     }
-    if (item.importanceBucket === "높음") {
+    if (item.importanceBucket === "high") {
       current.highImportanceCount += 1;
     }
 
     counter.set(key, current);
   }
 
-  return [...counter.values()].sort((left, right) => right.count - left.count || left.key.localeCompare(right.key));
+  return [...counter.values()].sort((left, right) => right.count - left.count || left.key.localeCompare(right.key, getLocale()));
 }
 
 function computeRecencyScore(dateValues, dateAddedMs) {
@@ -314,7 +334,7 @@ function computeImportanceScore(item, dateValues) {
   const depthScore = Math.max(0, w.depthBase - item.depth * w.depthStep);
   const orderScore = Math.max(0, w.orderBase - item.siblingIndex * w.orderStep);
   const recencyScore = computeRecencyScore(dateValues, item.dateAddedMs);
-  const folderScore = item.folderPath.some((folder) => FOLDER_PRIORITY_RE.test(folder)) ? w.folderPriority : 0;
+  const folderScore = item.folderPath.some((folder) => getFolderPriorityRe().test(folder)) ? w.folderPriority : 0;
   const httpsScore = item.url.startsWith("https://") ? w.https : 0;
   const titleScore = item.title && item.title.length <= w.titleMaxLength ? w.titleGood : w.titleWeak;
   const duplicatePenalty = item.duplicateCount > 1 ? w.duplicatePenalty : 0;
@@ -327,12 +347,12 @@ function computeImportanceScore(item, dateValues) {
 
 function bucketImportance(score) {
   if (score >= 70) {
-    return "높음";
+    return "high";
   }
   if (score >= 45) {
-    return "중간";
+    return "medium";
   }
-  return "낮음";
+  return "low";
 }
 
 function sortByImportance(items) {
@@ -341,7 +361,7 @@ function sortByImportance(items) {
       return right.importanceScore - left.importanceScore;
     }
 
-    return left.title.localeCompare(right.title, "ko");
+    return left.title.localeCompare(right.title, getLocale());
   });
 }
 
@@ -349,16 +369,16 @@ function buildSuggestions(summary) {
   const suggestions = [];
 
   if (summary.deadLinks > 0) {
-    suggestions.push(`죽은 링크 ${summary.deadLinks}개를 먼저 제거하면 정리 난이도가 가장 크게 낮아진다.`);
+    suggestions.push(msg("suggestion_dead_links", [String(summary.deadLinks)]));
   }
   if (summary.duplicateGroups > 0) {
-    suggestions.push(`중복 그룹 ${summary.duplicateGroups}개에서 대표 북마크만 남기면 북마크 수가 빠르게 줄어든다.`);
+    suggestions.push(msg("suggestion_duplicates", [String(summary.duplicateGroups)]));
   }
   if (summary.topTopic?.key) {
-    suggestions.push(`가장 큰 주제는 "${summary.topTopic.key}"이므로 전용 폴더를 따로 두는 편이 관리가 쉽다.`);
+    suggestions.push(msg("suggestion_top_topic", [summary.topTopic.key]));
   }
   if (summary.topDomain?.key) {
-    suggestions.push(`"${summary.topDomain.key}" 도메인 북마크가 가장 많으므로 도메인 기준 정리 효과가 크다.`);
+    suggestions.push(msg("suggestion_top_domain", [summary.topDomain.key]));
   }
 
   return suggestions;
@@ -388,9 +408,9 @@ function flattenItemsFromRoots(roots) {
         url: node.url,
         normalizedUrl,
         root: rootName,
-        rootLabel: ROOT_LABELS[rootName] ?? rootName,
+        rootLabel: getRootLabels()[rootName] ?? rootName,
         folderPath,
-        pathLabel: folderPath.length ? folderPath.join(" / ") : "(루트)",
+        pathLabel: folderPath.length ? folderPath.join(" / ") : msg("path_root"),
         depth,
         siblingIndex,
         indexPath,
@@ -442,7 +462,7 @@ export async function checkLinkStatuses(items, options = {}) {
       statusMap.set(item.normalizedUrl, {
         status: "special",
         httpStatus: null,
-        detail: "http/https 이외 스킴",
+        detail: msg("link_detail_non_http"),
       });
     }
   }
@@ -499,7 +519,7 @@ async function probeUrl(url, timeoutMs) {
         return {
           status: "alive",
           httpStatus: response.status,
-          detail: "접근 제한",
+          detail: msg("link_detail_restricted"),
         };
       }
 
@@ -528,7 +548,7 @@ async function probeUrl(url, timeoutMs) {
       return {
         status: "suspect",
         httpStatus: null,
-        detail: error?.message ?? "요청 실패",
+        detail: error?.message ?? msg("link_detail_request_failed"),
       };
     }
   }
@@ -536,14 +556,14 @@ async function probeUrl(url, timeoutMs) {
   return {
     status: "suspect",
     httpStatus: null,
-    detail: "응답 없음",
+    detail: msg("link_detail_no_response"),
   };
 }
 
 export async function analyzeBookmarks(rawText, options = {}) {
   const parsed = JSON.parse(rawText);
   if (!parsed?.roots || typeof parsed.roots !== "object") {
-    throw new Error("크롬 북마크 JSON 형식이 아닙니다. roots 객체가 필요합니다.");
+    throw new Error(msg("error_invalid_json"));
   }
 
   const items = flattenItemsFromRoots(parsed.roots);
@@ -572,7 +592,7 @@ export async function analyzeBookmarks(rawText, options = {}) {
     const linkInfo = linkStatusLookup[item.normalizedUrl] ?? {
       status: options.linkCheckMode === "none" ? "unchecked" : "unchecked",
       httpStatus: null,
-      detail: "미검사",
+      detail: msg("link_detail_unchecked"),
     };
 
     const duplicateCount = duplicateCounter.get(item.normalizedUrl) ?? 1;
@@ -647,7 +667,7 @@ export async function analyzeBookmarks(rawText, options = {}) {
   return {
     meta: {
       exportedAt: new Date().toISOString(),
-      rootLabels: ROOT_LABELS,
+      rootLabels: getRootLabels(),
       sourceName: parsed.checksum ?? null,
     },
     options: {
@@ -711,7 +731,7 @@ export function getModePathSegments(item, mode) {
   }
 
   if (mode === "importance") {
-    return [item.importanceBucket];
+    return [getBucketDisplayName(item.importanceBucket)];
   }
 
   return item.folderPath;
@@ -871,7 +891,7 @@ function buildOriginalExportTreeFromRoots(roots) {
 
     root.children.push({
       type: "folder",
-      name: ROOT_LABELS[rootKey] ?? rootKey,
+      name: getRootLabels()[rootKey] ?? rootKey,
       children: (node.children ?? []).map(chromeNodeToExportNode),
     });
   }
@@ -1021,7 +1041,7 @@ function createChromeFolderNode(name, allocateId, childSkeleton, timestamp) {
 
 function materializeChromeChildren(folderSkeleton, allocateId, timestamp) {
   const folderNodes = [...folderSkeleton.folders.keys()]
-    .sort((left, right) => left.localeCompare(right, "ko"))
+    .sort((left, right) => left.localeCompare(right, getLocale()))
     .map((folderName) =>
       createChromeFolderNode(folderName, allocateId, folderSkeleton.folders.get(folderName), timestamp),
     );
@@ -1082,7 +1102,7 @@ function applyChildrenToRoots(parsed, analysis, options = {}) {
       ...template,
       id: String(template.id ?? allocateId()),
       guid: template.guid ?? crypto.randomUUID().toLowerCase(),
-      name: template.name ?? ROOT_LABELS[rootKey] ?? rootKey,
+      name: template.name ?? getRootLabels()[rootKey] ?? rootKey,
       type: "folder",
       date_added: template.date_added ?? timestamp,
       date_modified: timestamp,
@@ -1099,7 +1119,7 @@ function applyChildrenToRoots(parsed, analysis, options = {}) {
 export function createChromeBookmarkPayload(rawText, analysis, applyOptions = {}) {
   const parsed = JSON.parse(rawText);
   if (!parsed?.roots || typeof parsed.roots !== "object") {
-    throw new Error("크롬 북마크 JSON 형식이 아닙니다. roots 객체가 필요합니다.");
+    throw new Error(msg("error_invalid_json"));
   }
 
   const { nextRoots, filteredItems } =

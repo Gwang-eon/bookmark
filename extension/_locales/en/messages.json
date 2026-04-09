@@ -1,0 +1,528 @@
+{
+  "extName": {
+    "message": "Chrome Bookmark Organizer"
+  },
+  "extDescription": {
+    "message": "Chrome bookmark organizer — dead links, duplicates, topic/domain classification, importance analysis"
+  },
+
+  "root_bookmark_bar": {
+    "message": "Bookmarks Bar"
+  },
+  "root_other": {
+    "message": "Other Bookmarks"
+  },
+  "root_synced": {
+    "message": "Synced Bookmarks"
+  },
+
+  "topic_development": {
+    "message": "Development"
+  },
+  "topic_ai_data": {
+    "message": "AI & Data"
+  },
+  "topic_productivity": {
+    "message": "Productivity"
+  },
+  "topic_design": {
+    "message": "Design"
+  },
+  "topic_news": {
+    "message": "News & Reading"
+  },
+  "topic_shopping": {
+    "message": "Shopping"
+  },
+  "topic_finance": {
+    "message": "Finance"
+  },
+  "topic_media": {
+    "message": "Video & Media"
+  },
+  "topic_social": {
+    "message": "Social & Community"
+  },
+  "topic_education": {
+    "message": "Learning & Reference"
+  },
+  "topic_travel": {
+    "message": "Travel & Maps"
+  },
+  "topic_other": {
+    "message": "Other"
+  },
+
+  "pattern_development": {
+    "message": "development|programming|code|docs|repo"
+  },
+  "pattern_ai_data": {
+    "message": "artificial intelligence|data|model|prompt"
+  },
+  "pattern_productivity": {
+    "message": "work|schedule|note|meeting|document"
+  },
+  "pattern_design": {
+    "message": "design|color|font|icon|layout"
+  },
+  "pattern_news": {
+    "message": "news|blog|article|reading"
+  },
+  "pattern_shopping": {
+    "message": "shopping|purchase|market|store"
+  },
+  "pattern_finance": {
+    "message": "finance|investment|stock|tax|payment"
+  },
+  "pattern_media": {
+    "message": "video|music|movie|streaming|channel"
+  },
+  "pattern_social": {
+    "message": "community|forum|social|chat|discussion"
+  },
+  "pattern_education": {
+    "message": "learning|lecture|tutorial|guide|reference|wiki"
+  },
+  "pattern_travel": {
+    "message": "travel|map|flight|hotel|booking"
+  },
+
+  "pattern_folder_priority": {
+    "message": "reading|work|important|frequent|reference|tools"
+  },
+
+  "domain_other": {
+    "message": "Other"
+  },
+  "path_root": {
+    "message": "(root)"
+  },
+
+  "bucket_high": {
+    "message": "High"
+  },
+  "bucket_medium": {
+    "message": "Medium"
+  },
+  "bucket_low": {
+    "message": "Low"
+  },
+
+  "link_detail_non_http": {
+    "message": "Non-http/https scheme"
+  },
+  "link_detail_restricted": {
+    "message": "Access restricted"
+  },
+  "link_detail_request_failed": {
+    "message": "Request failed"
+  },
+  "link_detail_no_response": {
+    "message": "No response"
+  },
+  "link_detail_unchecked": {
+    "message": "Unchecked"
+  },
+
+  "error_invalid_json": {
+    "message": "Not a valid Chrome bookmark JSON format. A roots object is required."
+  },
+  "error_backup_not_found": {
+    "message": "Backup not found."
+  },
+  "error_backup_integrity": {
+    "message": "Backup data integrity check failed. Aborting restore."
+  },
+
+  "suggestion_dead_links": {
+    "message": "Removing $1 dead links first will reduce cleanup difficulty the most.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_duplicates": {
+    "message": "Keeping only the representative bookmark from $1 duplicate groups will quickly reduce the bookmark count.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_top_topic": {
+    "message": "The largest topic is \"$1\", so creating a dedicated folder makes management easier.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_top_domain": {
+    "message": "\"$1\" has the most bookmarks, so organizing by domain will be most effective.",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_none": {
+    "message": "There are not many items to remove right away. Define a folder policy first."
+  },
+
+  "summary_total": {
+    "message": "Total Bookmarks"
+  },
+  "summary_duplicates": {
+    "message": "Removable Duplicates"
+  },
+  "summary_dead": {
+    "message": "Dead Links"
+  },
+  "summary_suspect": {
+    "message": "Suspect Links"
+  },
+  "summary_unique": {
+    "message": "Unique URLs"
+  },
+  "summary_domains": {
+    "message": "Domains"
+  },
+  "summary_topics": {
+    "message": "Topics"
+  },
+  "summary_alive": {
+    "message": "Live Links"
+  },
+
+  "col_domain": {
+    "message": "Domain"
+  },
+  "col_bookmark_count": {
+    "message": "Bookmarks"
+  },
+  "col_dead_links": {
+    "message": "Dead Links"
+  },
+  "col_high_importance": {
+    "message": "High Importance"
+  },
+  "col_topic": {
+    "message": "Topic"
+  },
+  "col_status": {
+    "message": "Status"
+  },
+  "col_title": {
+    "message": "Title"
+  },
+  "col_url": {
+    "message": "URL"
+  },
+  "col_folder": {
+    "message": "Folder"
+  },
+  "col_response": {
+    "message": "Response"
+  },
+  "col_importance": {
+    "message": "Importance"
+  },
+  "col_created": {
+    "message": "Created"
+  },
+  "col_reason": {
+    "message": "Reason"
+  },
+  "col_size": {
+    "message": "Size"
+  },
+  "col_rollback": {
+    "message": "Rollback"
+  },
+
+  "table_empty": {
+    "message": "No items to display."
+  },
+  "no_duplicate_groups": {
+    "message": "No duplicate groups."
+  },
+  "no_backups": {
+    "message": "No saved backups."
+  },
+  "truncation_notice": {
+    "message": "$1 more items. (showing $3 of $2 total)",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+  "duplicate_info": {
+    "message": "$1 duplicates, keep representative: $2 / $3",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+
+  "selection_with_exclusion": {
+    "message": "$1 included / $2 excluded (total $3)",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+  "selection_all_included": {
+    "message": "All $1 included",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "select_all_title": {
+    "message": "Select/deselect all currently displayed items"
+  },
+
+  "btn_rollback": {
+    "message": "Restore this backup"
+  },
+  "btn_analyze": {
+    "message": "Analyze Bookmarks"
+  },
+  "btn_download": {
+    "message": "Download Organized"
+  },
+  "btn_backup": {
+    "message": "Backup Current Bookmarks"
+  },
+  "btn_apply": {
+    "message": "Apply Organized"
+  },
+  "btn_refresh_backups": {
+    "message": "Refresh Backup List"
+  },
+  "btn_include_all": {
+    "message": "Include All"
+  },
+  "btn_exclude_all": {
+    "message": "Exclude All"
+  },
+
+  "status_waiting": {
+    "message": "Waiting"
+  },
+  "status_analyzing": {
+    "message": "Reading and analyzing browser bookmarks."
+  },
+  "status_link_checking": {
+    "message": "Checking links: $1 / $2",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" }
+    }
+  },
+  "status_analysis_complete": {
+    "message": "Analysis complete: $1 bookmarks",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "status_analyze_first": {
+    "message": "Analyze bookmarks first."
+  },
+  "status_generating_file": {
+    "message": "Generating organized file."
+  },
+  "status_download_started": {
+    "message": "Download started."
+  },
+  "status_operation_in_progress": {
+    "message": "Another operation is in progress."
+  },
+  "status_backing_up": {
+    "message": "Backing up current bookmarks."
+  },
+  "status_backup_created": {
+    "message": "Backup created."
+  },
+  "status_need_analysis": {
+    "message": "Analysis results are required first."
+  },
+  "status_applying": {
+    "message": "Backing up current bookmarks and applying organized version."
+  },
+  "status_apply_complete": {
+    "message": "Apply complete."
+  },
+  "status_backups_refreshed": {
+    "message": "Backup list refreshed."
+  },
+  "status_rolling_back": {
+    "message": "Rolling back to selected backup."
+  },
+  "status_rollback_complete": {
+    "message": "Rollback complete."
+  },
+
+  "confirm_apply": {
+    "message": "Apply the organized bookmarks directly to the browser.\nCurrent bookmarks will be backed up automatically. Continue?"
+  },
+  "confirm_rollback": {
+    "message": "Roll back to the selected backup. Current bookmarks will be backed up automatically. Continue?"
+  },
+
+  "html_eyebrow": {
+    "message": "CHROME EXTENSION"
+  },
+  "html_title": {
+    "message": "Chrome Bookmark Organizer"
+  },
+  "html_subtitle": {
+    "message": "Reads your browser bookmarks directly and analyzes dead links, duplicates, topic/domain classification, and importance scores all at once."
+  },
+  "html_criteria_title": {
+    "message": "Cleanup Criteria"
+  },
+  "html_criteria_dead": {
+    "message": "Dead Links"
+  },
+  "html_criteria_dup": {
+    "message": "Duplicates"
+  },
+  "html_criteria_topic": {
+    "message": "By Topic"
+  },
+  "html_criteria_domain": {
+    "message": "By Domain"
+  },
+  "html_criteria_importance": {
+    "message": "By Importance"
+  },
+  "html_section_analysis": {
+    "message": "Analysis"
+  },
+  "html_section_analysis_desc": {
+    "message": "Reads and analyzes your browser bookmarks directly."
+  },
+  "html_link_check_label": {
+    "message": "Dead Link Check"
+  },
+  "html_option_quick": {
+    "message": "Quick check (top 200 URLs)"
+  },
+  "html_option_full": {
+    "message": "Full check"
+  },
+  "html_option_skip": {
+    "message": "Skip"
+  },
+  "html_timeout_label": {
+    "message": "Timeout (ms)"
+  },
+  "html_section_summary": {
+    "message": "Summary"
+  },
+  "html_section_summary_desc": {
+    "message": "Key metrics for a quick overview of your bookmark status."
+  },
+  "html_section_suggestions": {
+    "message": "Suggested Actions"
+  },
+  "html_section_suggestions_desc": {
+    "message": "Automatically suggests the most impactful cleanup order."
+  },
+  "html_section_top_domains": {
+    "message": "Top Domains"
+  },
+  "html_section_top_domains_desc": {
+    "message": "Start cleaning up where bookmarks are concentrated under the same domain."
+  },
+  "html_section_topic_class": {
+    "message": "Topic Classification"
+  },
+  "html_section_topic_class_desc": {
+    "message": "Rule-based classification that can be extended as needed."
+  },
+  "html_section_dead_links": {
+    "message": "Dead Links"
+  },
+  "html_section_dead_links_desc": {
+    "message": "Timeouts and 5xx errors are also shown as suspect links."
+  },
+  "html_section_dup_groups": {
+    "message": "Duplicate Groups"
+  },
+  "html_section_dup_groups_desc": {
+    "message": "Keeps the bookmark with the highest importance score as representative."
+  },
+  "html_section_all_bookmarks": {
+    "message": "All Bookmarks"
+  },
+  "html_section_all_bookmarks_desc": {
+    "message": "List for searching, sorting, and checking status."
+  },
+  "html_search_placeholder": {
+    "message": "Search title, URL, domain, folder"
+  },
+  "html_sort_importance": {
+    "message": "By Importance"
+  },
+  "html_sort_domain": {
+    "message": "By Domain"
+  },
+  "html_sort_topic": {
+    "message": "By Topic"
+  },
+  "html_sort_title": {
+    "message": "By Title"
+  },
+  "html_section_export": {
+    "message": "Export"
+  },
+  "html_section_export_desc": {
+    "message": "Download as HTML or JSON after removing dead links and duplicates."
+  },
+  "html_export_mode_label": {
+    "message": "Organization Mode"
+  },
+  "html_export_original": {
+    "message": "Keep original folder structure"
+  },
+  "html_export_topic": {
+    "message": "Folders by topic"
+  },
+  "html_export_domain": {
+    "message": "Folders by domain"
+  },
+  "html_export_importance": {
+    "message": "Importance buckets"
+  },
+  "html_format_label": {
+    "message": "Format"
+  },
+  "html_format_html": {
+    "message": "HTML (for Chrome import)"
+  },
+  "html_format_json": {
+    "message": "JSON (for reports)"
+  },
+  "html_exclude_dead": {
+    "message": "Exclude dead links"
+  },
+  "html_exclude_suspect": {
+    "message": "Exclude suspect links"
+  },
+  "html_exclude_dup": {
+    "message": "Exclude duplicates"
+  },
+  "html_section_apply": {
+    "message": "Apply / Rollback"
+  },
+  "html_section_apply_desc": {
+    "message": "Automatically backed up before applying."
+  },
+  "html_apply_hint": {
+    "message": "For a safe apply, it is better to restart Chrome to verify the changes."
+  },
+
+  "popup_btn_open": {
+    "message": "Open Bookmark Organizer"
+  },
+  "popup_hint": {
+    "message": "Opens in a new tab"
+  }
+}

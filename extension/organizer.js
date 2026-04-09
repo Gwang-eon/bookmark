@@ -2,6 +2,7 @@ import { analyzeBookmarks, createExportPayload } from "./bookmark-service.js";
 import { chromeApiTreeToRawText } from "./bridge.js";
 import { applyCleanup, applyReorganize } from "./apply-service.js";
 import { createBackup, listBackups, restoreBackup } from "./backup-service.js";
+import { msg, localizeHtml, getBucketDisplayName, getBucketCssClass, getLocale } from "./i18n.js";
 
 const state = {
   rawText: "",
@@ -72,7 +73,7 @@ function badge(text, kind) {
 
 function renderTable(columns, rows) {
   if (!rows.length) {
-    return `<p>표시할 항목이 없다.</p>`;
+    return `<p>${msg("table_empty")}</p>`;
   }
 
   return `
@@ -98,14 +99,14 @@ function renderTable(columns, rows) {
 
 function renderSummary(analysis) {
   const cards = [
-    ["전체 북마크", analysis.summary.totalBookmarks],
-    ["중복 제거 가능 수", analysis.summary.duplicateBookmarks],
-    ["죽은 링크", analysis.summary.deadLinks],
-    ["의심 링크", analysis.summary.suspectLinks],
-    ["고유 URL", analysis.summary.uniqueUrls],
-    ["도메인 수", analysis.summary.domainCount],
-    ["주제 수", analysis.summary.topicCount],
-    ["살아 있는 링크", analysis.summary.aliveLinks],
+    [msg("summary_total"), analysis.summary.totalBookmarks],
+    [msg("summary_duplicates"), analysis.summary.duplicateBookmarks],
+    [msg("summary_dead"), analysis.summary.deadLinks],
+    [msg("summary_suspect"), analysis.summary.suspectLinks],
+    [msg("summary_unique"), analysis.summary.uniqueUrls],
+    [msg("summary_domains"), analysis.summary.domainCount],
+    [msg("summary_topics"), analysis.summary.topicCount],
+    [msg("summary_alive"), analysis.summary.aliveLinks],
   ];
 
   summaryCards.innerHTML = cards
@@ -122,17 +123,17 @@ function renderSummary(analysis) {
 function renderSuggestions(analysis) {
   suggestionList.innerHTML = analysis.suggestions.length
     ? analysis.suggestions.map((item) => `<span class="pill">${escapeHtml(item)}</span>`).join("")
-    : `<span class="pill">바로 제거할 항목이 많지 않다. 폴더 정책을 먼저 정하면 된다.</span>`;
+    : `<span class="pill">${msg("suggestion_none")}</span>`;
 }
 
 function renderDomainAndTopicTables(analysis) {
   const domainLimit = 12;
   domainTable.innerHTML = renderTable(
     [
-      { label: "도메인", render: (row) => escapeHtml(row.key) },
-      { label: "북마크 수", render: (row) => String(row.count) },
-      { label: "죽은 링크", render: (row) => String(row.deadCount) },
-      { label: "높은 중요도", render: (row) => String(row.highImportanceCount) },
+      { label: msg("col_domain"), render: (row) => escapeHtml(row.key) },
+      { label: msg("col_bookmark_count"), render: (row) => String(row.count) },
+      { label: msg("col_dead_links"), render: (row) => String(row.deadCount) },
+      { label: msg("col_high_importance"), render: (row) => String(row.highImportanceCount) },
     ],
     analysis.domainSummary.slice(0, domainLimit),
   ) + truncationNotice(analysis.domainSummary.length, domainLimit);
@@ -140,10 +141,10 @@ function renderDomainAndTopicTables(analysis) {
   const topicLimit = 12;
   topicTable.innerHTML = renderTable(
     [
-      { label: "주제", render: (row) => escapeHtml(row.key) },
-      { label: "북마크 수", render: (row) => String(row.count) },
-      { label: "죽은 링크", render: (row) => String(row.deadCount) },
-      { label: "높은 중요도", render: (row) => String(row.highImportanceCount) },
+      { label: msg("col_topic"), render: (row) => escapeHtml(row.key) },
+      { label: msg("col_bookmark_count"), render: (row) => String(row.count) },
+      { label: msg("col_dead_links"), render: (row) => String(row.deadCount) },
+      { label: msg("col_high_importance"), render: (row) => String(row.highImportanceCount) },
     ],
     analysis.topicSummary.slice(0, topicLimit),
   ) + truncationNotice(analysis.topicSummary.length, topicLimit);
@@ -153,7 +154,7 @@ function truncationNotice(total, limit) {
   if (total <= limit) {
     return "";
   }
-  return `<p class="truncation-notice">외 ${total - limit}건이 더 있습니다. (총 ${total}건 중 ${limit}건 표시)</p>`;
+  return `<p class="truncation-notice">${msg("truncation_notice", [String(total - limit), String(total), String(limit)])}</p>`;
 }
 
 function isSafeUrl(url) {
@@ -169,10 +170,10 @@ function renderDeadLinks(analysis) {
   const limit = 50;
   deadLinksTable.innerHTML = renderTable(
     [
-      { label: "상태", render: (row) => badge(row.linkStatus, row.linkStatus) },
-      { label: "제목", render: (row) => escapeHtml(row.title) },
+      { label: msg("col_status"), render: (row) => badge(row.linkStatus, row.linkStatus) },
+      { label: msg("col_title"), render: (row) => escapeHtml(row.title) },
       {
-        label: "URL",
+        label: msg("col_url"),
         render: (row) => {
           if (isSafeUrl(row.url)) {
             return `<a href="${escapeHtml(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.domain)}</a>`;
@@ -180,9 +181,9 @@ function renderDeadLinks(analysis) {
           return escapeHtml(row.domain);
         },
       },
-      { label: "폴더", render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
+      { label: msg("col_folder"), render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
       {
-        label: "응답",
+        label: msg("col_response"),
         render: (row) => escapeHtml(row.httpStatus ? String(row.httpStatus) : row.linkDetail || "-"),
       },
     ],
@@ -192,7 +193,7 @@ function renderDeadLinks(analysis) {
 
 function renderDuplicates(analysis) {
   if (!analysis.duplicateGroups.length) {
-    duplicateList.innerHTML = "<p>중복 그룹이 없다.</p>";
+    duplicateList.innerHTML = `<p>${msg("no_duplicate_groups")}</p>`;
     return;
   }
 
@@ -204,7 +205,7 @@ function renderDuplicates(analysis) {
         <article class="duplicate-card">
           <strong>${escapeHtml(group.keep.title)}</strong>
           <p>${escapeHtml(group.key)}</p>
-          <p>중복 ${group.count}개, 대표 유지: ${escapeHtml(group.keep.rootLabel)} / ${escapeHtml(group.keep.pathLabel)}</p>
+          <p>${msg("duplicate_info", [String(group.count), group.keep.rootLabel, group.keep.pathLabel])}</p>
         </article>`,
     )
     .join("") + truncationNotice(analysis.duplicateGroups.length, limit);
@@ -232,11 +233,11 @@ function getVisibleItems() {
 function sortItems(items) {
   switch (sortSelect.value) {
     case "title":
-      return items.sort((a, b) => a.title.localeCompare(b.title, "ko"));
+      return items.sort((a, b) => a.title.localeCompare(b.title, getLocale()));
     case "domain":
-      return items.sort((a, b) => a.domain.localeCompare(b.domain, "ko") || b.importanceScore - a.importanceScore);
+      return items.sort((a, b) => a.domain.localeCompare(b.domain, getLocale()) || b.importanceScore - a.importanceScore);
     case "topic":
-      return items.sort((a, b) => a.topic.localeCompare(b.topic, "ko") || b.importanceScore - a.importanceScore);
+      return items.sort((a, b) => a.topic.localeCompare(b.topic, getLocale()) || b.importanceScore - a.importanceScore);
     default:
       return items.sort((a, b) => b.importanceScore - a.importanceScore);
   }
@@ -248,8 +249,8 @@ function updateSelectionSummary() {
   const summaryEl = document.getElementById("selectionSummary");
   if (summaryEl) {
     summaryEl.textContent = excludedCount > 0
-      ? `${totalItems - excludedCount}개 포함 / ${excludedCount}개 제외 (전체 ${totalItems}개)`
-      : `전체 ${totalItems}개 포함`;
+      ? msg("selection_with_exclusion", [String(totalItems - excludedCount), String(excludedCount), String(totalItems)])
+      : msg("selection_all_included", [String(totalItems)]);
   }
 }
 
@@ -261,22 +262,22 @@ function renderBookmarks() {
   bookmarkTable.innerHTML = renderTable(
     [
       {
-        rawLabel: `<input type="checkbox" id="selectAllCheckbox" ${allVisibleSelected ? "checked" : ""} title="현재 표시된 항목 전체 선택/해제">`,
+        rawLabel: `<input type="checkbox" id="selectAllCheckbox" ${allVisibleSelected ? "checked" : ""} title="${msg("select_all_title")}">`,
         render: (row) => {
           const checked = !state.excludedItemIds.has(row.id);
           return `<input type="checkbox" class="bookmark-select" data-item-id="${escapeHtml(row.id)}" ${checked ? "checked" : ""}>`;
         },
       },
-      { label: "제목", render: (row) => escapeHtml(row.title) },
+      { label: msg("col_title"), render: (row) => escapeHtml(row.title) },
       {
-        label: "중요도",
+        label: msg("col_importance"),
         render: (row) =>
-          `${badge(row.importanceBucket, row.importanceBucket === "높음" ? "high" : row.importanceBucket === "중간" ? "medium" : "low")} <strong>${row.importanceScore}</strong>`,
+          `${badge(getBucketDisplayName(row.importanceBucket), getBucketCssClass(row.importanceBucket))} <strong>${row.importanceScore}</strong>`,
       },
-      { label: "주제", render: (row) => escapeHtml(row.topic) },
-      { label: "도메인", render: (row) => escapeHtml(row.domain) },
-      { label: "상태", render: (row) => badge(row.linkStatus, row.linkStatus) },
-      { label: "폴더", render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
+      { label: msg("col_topic"), render: (row) => escapeHtml(row.topic) },
+      { label: msg("col_domain"), render: (row) => escapeHtml(row.domain) },
+      { label: msg("col_status"), render: (row) => badge(row.linkStatus, row.linkStatus) },
+      { label: msg("col_folder"), render: (row) => escapeHtml(`${row.rootLabel} / ${row.pathLabel}`) },
     ],
     items,
   ) + truncationNotice(allItems.length, limit);
@@ -305,25 +306,25 @@ function formatSize(bytes) {
 
 function renderBackups() {
   if (!state.backups.length) {
-    backupTable.innerHTML = "<p>이 경로에 저장된 백업이 없다.</p>";
+    backupTable.innerHTML = `<p>${msg("no_backups")}</p>`;
     return;
   }
 
   backupTable.innerHTML = renderTable(
     [
       {
-        label: "생성 시각",
-        render: (row) => escapeHtml(new Date(row.createdAt).toLocaleString("ko-KR")),
+        label: msg("col_created"),
+        render: (row) => escapeHtml(new Date(row.createdAt).toLocaleString(getLocale())),
       },
-      { label: "사유", render: (row) => escapeHtml(row.reason) },
+      { label: msg("col_reason"), render: (row) => escapeHtml(row.reason) },
       {
-        label: "크기",
+        label: msg("col_size"),
         render: (row) => escapeHtml(formatSize(row.size || row.compressedSize || 0)),
       },
       {
-        label: "롤백",
+        label: msg("col_rollback"),
         render: (row) =>
-          `<button class="button rollback-button" data-backup-id="${escapeHtml(row.id)}">이 백업으로 복원</button>`,
+          `<button class="button rollback-button" data-backup-id="${escapeHtml(row.id)}">${msg("btn_rollback")}</button>`,
       },
     ],
     state.backups,
@@ -404,7 +405,7 @@ document.getElementById("excludeAllButton").addEventListener("click", () => {
 });
 
 analyzeButton.addEventListener("click", async () => {
-  setStatus("브라우저 북마크를 읽고 분석 중이다.");
+  setStatus(msg("status_analyzing"));
   analyzeButton.disabled = true;
   try {
     const tree = await chrome.bookmarks.getTree();
@@ -412,7 +413,7 @@ analyzeButton.addEventListener("click", async () => {
     const analysis = await analyzeBookmarks(state.rawText, {
       ...getAnalysisOptions(),
       onProgress: ({ checked, total }) => {
-        setStatus(`링크 검사 중: ${checked} / ${total}`);
+        setStatus(msg("status_link_checking", [String(checked), String(total)]));
       },
     });
     state.analysis = analysis;
@@ -420,7 +421,7 @@ analyzeButton.addEventListener("click", async () => {
     state.backups = await listBackups();
     renderAnalysis(analysis);
     updateApplyAvailability();
-    setStatus(`분석 완료: 북마크 ${analysis.summary.totalBookmarks}개`);
+    setStatus(msg("status_analysis_complete", [String(analysis.summary.totalBookmarks)]));
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
@@ -433,10 +434,10 @@ sortSelect.addEventListener("change", renderBookmarks);
 
 downloadButton.addEventListener("click", async () => {
   if (!state.rawText || !state.analysis) {
-    setStatus("먼저 북마크를 분석해야 한다.", "error");
+    setStatus(msg("status_analyze_first"), "error");
     return;
   }
-  setStatus("정리된 파일을 생성 중이다.");
+  setStatus(msg("status_generating_file"));
   try {
     const payload = createExportPayload(state.rawText, state.analysis, {
       ...getCleanupOptions(),
@@ -450,7 +451,7 @@ downloadButton.addEventListener("click", async () => {
     anchor.download = `bookmarks-organized.${payload.extension}`;
     anchor.click();
     URL.revokeObjectURL(href);
-    setStatus("다운로드를 시작했다.");
+    setStatus(msg("status_download_started"));
   } catch (error) {
     setStatus(error.message, "error");
   }
@@ -458,16 +459,16 @@ downloadButton.addEventListener("click", async () => {
 
 backupButton.addEventListener("click", async () => {
   if (operationInProgress) {
-    setStatus("다른 작업이 진행 중입니다.", "error");
+    setStatus(msg("status_operation_in_progress"), "error");
     return;
   }
   setOperationLock(true);
-  setStatus("현재 북마크를 백업 중이다.");
+  setStatus(msg("status_backing_up"));
   try {
     await createBackup("manual");
     state.backups = await listBackups();
     renderBackups();
-    setStatus("백업을 생성했다.");
+    setStatus(msg("status_backup_created"));
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
@@ -477,18 +478,18 @@ backupButton.addEventListener("click", async () => {
 
 applyButton.addEventListener("click", async () => {
   if (operationInProgress) {
-    setStatus("다른 작업이 진행 중입니다.", "error");
+    setStatus(msg("status_operation_in_progress"), "error");
     return;
   }
   if (!state.analysis) {
-    setStatus("먼저 분석 결과가 있어야 한다.", "error");
+    setStatus(msg("status_need_analysis"), "error");
     return;
   }
-  if (!confirm("정리본을 브라우저 북마크에 직접 적용합니다.\n현재 북마크는 자동 백업됩니다. 계속하시겠습니까?")) {
+  if (!confirm(msg("confirm_apply"))) {
     return;
   }
   setOperationLock(true);
-  setStatus("현재 북마크를 백업한 뒤 정리본을 적용 중이다.");
+  setStatus(msg("status_applying"));
   try {
     await createBackup("pre-apply");
     const options = { ...getCleanupOptions(), excludedIds: [...state.excludedItemIds] };
@@ -504,7 +505,7 @@ applyButton.addEventListener("click", async () => {
     state.backups = await listBackups();
     renderAnalysis(state.analysis);
     updateApplyAvailability();
-    setStatus("적용 완료.");
+    setStatus(msg("status_apply_complete"));
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
@@ -516,7 +517,7 @@ refreshBackupsButton.addEventListener("click", async () => {
   try {
     state.backups = await listBackups();
     renderBackups();
-    setStatus("백업 목록을 새로 읽었다.");
+    setStatus(msg("status_backups_refreshed"));
   } catch (error) {
     setStatus(error.message, "error");
   }
@@ -526,12 +527,12 @@ backupTable.addEventListener("click", async (event) => {
   const button = event.target.closest(".rollback-button");
   if (!button) return;
   if (operationInProgress) {
-    setStatus("다른 작업이 진행 중입니다.", "error");
+    setStatus(msg("status_operation_in_progress"), "error");
     return;
   }
-  if (!confirm("선택한 백업으로 롤백합니다. 현재 북마크는 자동 백업됩니다. 계속하시겠습니까?")) return;
+  if (!confirm(msg("confirm_rollback"))) return;
   setOperationLock(true);
-  setStatus("선택한 백업으로 롤백 중이다.");
+  setStatus(msg("status_rolling_back"));
   try {
     await restoreBackup(button.dataset.backupId);
     const tree = await chrome.bookmarks.getTree();
@@ -540,7 +541,7 @@ backupTable.addEventListener("click", async (event) => {
     state.excludedItemIds = new Set();
     state.backups = await listBackups();
     renderAnalysis(state.analysis);
-    setStatus("롤백 완료.");
+    setStatus(msg("status_rollback_complete"));
   } catch (error) {
     setStatus(error.message, "error");
   } finally {
@@ -549,6 +550,7 @@ backupTable.addEventListener("click", async (event) => {
 });
 
 async function bootstrap() {
+  localizeHtml();
   try {
     state.backups = await listBackups();
     renderBackups();

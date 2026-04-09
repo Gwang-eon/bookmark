@@ -1,0 +1,528 @@
+{
+  "extName": {
+    "message": "Chrome Bookmark Organizer"
+  },
+  "extDescription": {
+    "message": "Chromeブックマーク整理ツール — リンク切れ、重複、トピック/ドメイン分類、重要度分析"
+  },
+
+  "root_bookmark_bar": {
+    "message": "ブックマークバー"
+  },
+  "root_other": {
+    "message": "その他のブックマーク"
+  },
+  "root_synced": {
+    "message": "同期済みブックマーク"
+  },
+
+  "topic_development": {
+    "message": "開発"
+  },
+  "topic_ai_data": {
+    "message": "AI・データ"
+  },
+  "topic_productivity": {
+    "message": "生産性"
+  },
+  "topic_design": {
+    "message": "デザイン"
+  },
+  "topic_news": {
+    "message": "ニュース・読み物"
+  },
+  "topic_shopping": {
+    "message": "ショッピング"
+  },
+  "topic_finance": {
+    "message": "金融"
+  },
+  "topic_media": {
+    "message": "動画・メディア"
+  },
+  "topic_social": {
+    "message": "ソーシャル・コミュニティ"
+  },
+  "topic_education": {
+    "message": "学習・リファレンス"
+  },
+  "topic_travel": {
+    "message": "旅行・地図"
+  },
+  "topic_other": {
+    "message": "その他"
+  },
+
+  "pattern_development": {
+    "message": "開発|プログラミング|コード|ドキュメント|リポジトリ"
+  },
+  "pattern_ai_data": {
+    "message": "人工知能|データ|モデル|プロンプト"
+  },
+  "pattern_productivity": {
+    "message": "業務|スケジュール|ノート|会議|ドキュメント"
+  },
+  "pattern_design": {
+    "message": "デザイン|カラー|フォント|アイコン|レイアウト"
+  },
+  "pattern_news": {
+    "message": "ニュース|ブログ|記事|リーディング"
+  },
+  "pattern_shopping": {
+    "message": "ショッピング|購入|マーケット|ストア"
+  },
+  "pattern_finance": {
+    "message": "金融|投資|株式|税金|決済"
+  },
+  "pattern_media": {
+    "message": "動画|音楽|映画|ストリーミング|チャンネル"
+  },
+  "pattern_social": {
+    "message": "コミュニティ|フォーラム|ソーシャル|チャット|ディスカッション"
+  },
+  "pattern_education": {
+    "message": "学習|講義|チュートリアル|ガイド|リファレンス|ウィキ"
+  },
+  "pattern_travel": {
+    "message": "旅行|地図|航空|ホテル|予約"
+  },
+
+  "pattern_folder_priority": {
+    "message": "読み物|業務|重要|よく使う|参考|ツール"
+  },
+
+  "domain_other": {
+    "message": "その他"
+  },
+  "path_root": {
+    "message": "(ルート)"
+  },
+
+  "bucket_high": {
+    "message": "高"
+  },
+  "bucket_medium": {
+    "message": "中"
+  },
+  "bucket_low": {
+    "message": "低"
+  },
+
+  "link_detail_non_http": {
+    "message": "http/https以外のスキーム"
+  },
+  "link_detail_restricted": {
+    "message": "アクセス制限"
+  },
+  "link_detail_request_failed": {
+    "message": "リクエスト失敗"
+  },
+  "link_detail_no_response": {
+    "message": "応答なし"
+  },
+  "link_detail_unchecked": {
+    "message": "未検査"
+  },
+
+  "error_invalid_json": {
+    "message": "Chromeブックマークの正しいJSON形式ではありません。rootsオブジェクトが必要です。"
+  },
+  "error_backup_not_found": {
+    "message": "バックアップが見つかりません。"
+  },
+  "error_backup_integrity": {
+    "message": "バックアップデータの整合性検証に失敗しました。復元を中止します。"
+  },
+
+  "suggestion_dead_links": {
+    "message": "リンク切れ$1件を先に削除すると、整理の難易度が最も大きく下がる。",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_duplicates": {
+    "message": "重複グループ$1件で代表ブックマークだけ残せば、ブックマーク数が素早く減る。",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_top_topic": {
+    "message": "最大のトピックは「$1」なので、専用フォルダを分けた方が管理しやすい。",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_top_domain": {
+    "message": "「$1」ドメインのブックマークが最も多いため、ドメイン基準の整理が効果的だ。",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "suggestion_none": {
+    "message": "すぐに削除できる項目は多くない。まずフォルダポリシーを決めるとよい。"
+  },
+
+  "summary_total": {
+    "message": "全ブックマーク"
+  },
+  "summary_duplicates": {
+    "message": "重複削除可能数"
+  },
+  "summary_dead": {
+    "message": "リンク切れ"
+  },
+  "summary_suspect": {
+    "message": "疑わしいリンク"
+  },
+  "summary_unique": {
+    "message": "ユニークURL"
+  },
+  "summary_domains": {
+    "message": "ドメイン数"
+  },
+  "summary_topics": {
+    "message": "トピック数"
+  },
+  "summary_alive": {
+    "message": "有効なリンク"
+  },
+
+  "col_domain": {
+    "message": "ドメイン"
+  },
+  "col_bookmark_count": {
+    "message": "ブックマーク数"
+  },
+  "col_dead_links": {
+    "message": "リンク切れ"
+  },
+  "col_high_importance": {
+    "message": "高重要度"
+  },
+  "col_topic": {
+    "message": "トピック"
+  },
+  "col_status": {
+    "message": "ステータス"
+  },
+  "col_title": {
+    "message": "タイトル"
+  },
+  "col_url": {
+    "message": "URL"
+  },
+  "col_folder": {
+    "message": "フォルダ"
+  },
+  "col_response": {
+    "message": "レスポンス"
+  },
+  "col_importance": {
+    "message": "重要度"
+  },
+  "col_created": {
+    "message": "作成日時"
+  },
+  "col_reason": {
+    "message": "理由"
+  },
+  "col_size": {
+    "message": "サイズ"
+  },
+  "col_rollback": {
+    "message": "ロールバック"
+  },
+
+  "table_empty": {
+    "message": "表示する項目がない。"
+  },
+  "no_duplicate_groups": {
+    "message": "重複グループがない。"
+  },
+  "no_backups": {
+    "message": "保存されたバックアップがない。"
+  },
+  "truncation_notice": {
+    "message": "他$1件あります。(全$2件中$3件表示)",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+  "duplicate_info": {
+    "message": "重複$1件、代表を保持: $2 / $3",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+
+  "selection_with_exclusion": {
+    "message": "$1件を含む / $2件を除外 (全$3件)",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" },
+      "3": { "content": "$3" }
+    }
+  },
+  "selection_all_included": {
+    "message": "全$1件を含む",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "select_all_title": {
+    "message": "現在表示されている項目をすべて選択/解除"
+  },
+
+  "btn_rollback": {
+    "message": "このバックアップに復元"
+  },
+  "btn_analyze": {
+    "message": "ブックマーク分析"
+  },
+  "btn_download": {
+    "message": "整理版ダウンロード"
+  },
+  "btn_backup": {
+    "message": "現在のブックマークをバックアップ"
+  },
+  "btn_apply": {
+    "message": "整理版を適用"
+  },
+  "btn_refresh_backups": {
+    "message": "バックアップ一覧を更新"
+  },
+  "btn_include_all": {
+    "message": "すべて含む"
+  },
+  "btn_exclude_all": {
+    "message": "すべて除外"
+  },
+
+  "status_waiting": {
+    "message": "待機中"
+  },
+  "status_analyzing": {
+    "message": "ブラウザのブックマークを読み込み、分析中。"
+  },
+  "status_link_checking": {
+    "message": "リンク検査中: $1 / $2",
+    "placeholders": {
+      "1": { "content": "$1" },
+      "2": { "content": "$2" }
+    }
+  },
+  "status_analysis_complete": {
+    "message": "分析完了: ブックマーク$1件",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "status_analyze_first": {
+    "message": "まずブックマークを分析する必要がある。"
+  },
+  "status_generating_file": {
+    "message": "整理済みファイルを生成中。"
+  },
+  "status_download_started": {
+    "message": "ダウンロードを開始した。"
+  },
+  "status_operation_in_progress": {
+    "message": "別の操作が進行中です。"
+  },
+  "status_backing_up": {
+    "message": "現在のブックマークをバックアップ中。"
+  },
+  "status_backup_created": {
+    "message": "バックアップを作成した。"
+  },
+  "status_need_analysis": {
+    "message": "まず分析結果が必要だ。"
+  },
+  "status_applying": {
+    "message": "現在のブックマークをバックアップした後、整理版を適用中。"
+  },
+  "status_apply_complete": {
+    "message": "適用完了。"
+  },
+  "status_backups_refreshed": {
+    "message": "バックアップ一覧を再読み込みした。"
+  },
+  "status_rolling_back": {
+    "message": "選択したバックアップにロールバック中。"
+  },
+  "status_rollback_complete": {
+    "message": "ロールバック完了。"
+  },
+
+  "confirm_apply": {
+    "message": "整理版をブラウザのブックマークに直接適用します。\n現在のブックマークは自動的にバックアップされます。続行しますか？"
+  },
+  "confirm_rollback": {
+    "message": "選択したバックアップにロールバックします。現在のブックマークは自動的にバックアップされます。続行しますか？"
+  },
+
+  "html_eyebrow": {
+    "message": "CHROME EXTENSION"
+  },
+  "html_title": {
+    "message": "Chromeブックマーク整理ツール"
+  },
+  "html_subtitle": {
+    "message": "ブラウザのブックマークを直接読み込み、リンク切れ、重複リンク、トピック/ドメイン分類、重要度スコアを一度に分析する。"
+  },
+  "html_criteria_title": {
+    "message": "整理基準"
+  },
+  "html_criteria_dead": {
+    "message": "リンク切れ"
+  },
+  "html_criteria_dup": {
+    "message": "重複リンク"
+  },
+  "html_criteria_topic": {
+    "message": "トピック別"
+  },
+  "html_criteria_domain": {
+    "message": "ドメイン別"
+  },
+  "html_criteria_importance": {
+    "message": "重要度順"
+  },
+  "html_section_analysis": {
+    "message": "分析"
+  },
+  "html_section_analysis_desc": {
+    "message": "ブラウザのブックマークを直接読み込んで分析する。"
+  },
+  "html_link_check_label": {
+    "message": "リンク切れ検査"
+  },
+  "html_option_quick": {
+    "message": "クイック検査 (上位200件のURL)"
+  },
+  "html_option_full": {
+    "message": "全件検査"
+  },
+  "html_option_skip": {
+    "message": "スキップ"
+  },
+  "html_timeout_label": {
+    "message": "タイムアウト(ms)"
+  },
+  "html_section_summary": {
+    "message": "概要"
+  },
+  "html_section_summary_desc": {
+    "message": "現在のブックマーク状態を素早く確認できる主要指標。"
+  },
+  "html_section_suggestions": {
+    "message": "推奨アクション"
+  },
+  "html_section_suggestions_desc": {
+    "message": "効果の大きい整理順序を自動的に提案する。"
+  },
+  "html_section_top_domains": {
+    "message": "上位ドメイン"
+  },
+  "html_section_top_domains_desc": {
+    "message": "同じドメインにブックマークが集中しているところから整理できる。"
+  },
+  "html_section_topic_class": {
+    "message": "トピック分類"
+  },
+  "html_section_topic_class_desc": {
+    "message": "ルールベースの分類なので、必要に応じて分類ルールを拡張できる。"
+  },
+  "html_section_dead_links": {
+    "message": "リンク切れ"
+  },
+  "html_section_dead_links_desc": {
+    "message": "タイムアウトや5xxは疑わしいリンクとして併せて表示する。"
+  },
+  "html_section_dup_groups": {
+    "message": "重複グループ"
+  },
+  "html_section_dup_groups_desc": {
+    "message": "重要度スコアが最も高いブックマークを代表として残す。"
+  },
+  "html_section_all_bookmarks": {
+    "message": "全ブックマーク"
+  },
+  "html_section_all_bookmarks_desc": {
+    "message": "検索、ソート、ステータス確認用のリスト。"
+  },
+  "html_search_placeholder": {
+    "message": "タイトル、URL、ドメイン、フォルダを検索"
+  },
+  "html_sort_importance": {
+    "message": "重要度順"
+  },
+  "html_sort_domain": {
+    "message": "ドメイン順"
+  },
+  "html_sort_topic": {
+    "message": "トピック順"
+  },
+  "html_sort_title": {
+    "message": "タイトル順"
+  },
+  "html_section_export": {
+    "message": "エクスポート"
+  },
+  "html_section_export_desc": {
+    "message": "リンク切れと重複を除去した後、HTMLまたはJSONでダウンロードできる。"
+  },
+  "html_export_mode_label": {
+    "message": "整理方式"
+  },
+  "html_export_original": {
+    "message": "元のフォルダ構造を維持"
+  },
+  "html_export_topic": {
+    "message": "トピック別フォルダ"
+  },
+  "html_export_domain": {
+    "message": "ドメイン別フォルダ"
+  },
+  "html_export_importance": {
+    "message": "重要度バケット"
+  },
+  "html_format_label": {
+    "message": "形式"
+  },
+  "html_format_html": {
+    "message": "HTML (Chromeインポート用)"
+  },
+  "html_format_json": {
+    "message": "JSON (レポート用)"
+  },
+  "html_exclude_dead": {
+    "message": "リンク切れを除外"
+  },
+  "html_exclude_suspect": {
+    "message": "疑わしいリンクを除外"
+  },
+  "html_exclude_dup": {
+    "message": "重複リンクを除外"
+  },
+  "html_section_apply": {
+    "message": "直接適用 / ロールバック"
+  },
+  "html_section_apply_desc": {
+    "message": "適用前に自動的にバックアップされる。"
+  },
+  "html_apply_hint": {
+    "message": "安全に適用するには、Chromeを再起動して変更内容を確認する方がよい。"
+  },
+
+  "popup_btn_open": {
+    "message": "ブックマーク整理ツールを開く"
+  },
+  "popup_hint": {
+    "message": "新しいタブで開きます"
+  }
+}
